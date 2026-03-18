@@ -70,7 +70,7 @@ jobs:
             docker run -d \
               --name modular-erp \
               --restart unless-stopped \
-              -p 80:8080 \
+              -p 8080:8080 \
               -e SPRING_PROFILES_ACTIVE=postgres \
               -e SPRING_DATASOURCE_URL="jdbc:postgresql://${DB_HOST}:5432/${DB_NAME}" \
               -e SPRING_DATASOURCE_USERNAME="${DB_USER}" \

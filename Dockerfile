@@ -32,4 +32,4 @@ EXPOSE 8080
 ENV JAVA_OPTS="-Xms256m -Xmx512m"
 ENV SPRING_PROFILES_ACTIVE=postgres
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar --spring.web.resources.static-locations=file:./static/"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar --spring.web.resources.static-locations=file:/app/static/ --spring.mvc.static-path-pattern=/**"]

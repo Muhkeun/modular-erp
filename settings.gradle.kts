@@ -19,6 +19,8 @@ include("modules:hr")
 include("modules:quality")
 include("modules:supply-chain")
 include("modules:contract")
+include("modules:production")
+include("modules:planning")
 
 // Application
 include("app")

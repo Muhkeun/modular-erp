@@ -21,6 +21,8 @@ dependencies {
     implementation(project(":modules:quality"))
     implementation(project(":modules:supply-chain"))
     implementation(project(":modules:contract"))
+    implementation(project(":modules:production"))
+    implementation(project(":modules:planning"))
 
     runtimeOnly(rootProject.libs.postgresql)
     runtimeOnly(rootProject.libs.h2)

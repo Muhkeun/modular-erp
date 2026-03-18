@@ -14,7 +14,7 @@ import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-/** Event published when a PO is approved — logistics module listens for GR creation */
+/** PO 승인 이벤트 — 물류 모듈에서 수신하여 입고(GR) 준비를 시작한다 */
 class PurchaseOrderApprovedEvent(
     tenantId: String,
     val poId: Long,
@@ -22,6 +22,14 @@ class PurchaseOrderApprovedEvent(
     val vendorCode: String
 ) : DomainEvent(tenantId = tenantId)
 
+/**
+ * 발주서(PO) 서비스 — 발주 생성/승인/PR 연동을 담당.
+ *
+ * 주요 업무 흐름:
+ * 1. 직접 PO 생성 또는 승인된 PR에서 PO 전환
+ * 2. PR → PO 전환 시 PR의 미전환 잔량(openQuantity)을 자동 차감
+ * 3. PO 승인 시 PurchaseOrderApprovedEvent를 발행하여 물류 모듈에 알림
+ */
 @Service
 @Transactional(readOnly = true)
 class PurchaseOrderService(
@@ -68,13 +76,13 @@ class PurchaseOrderService(
             ).assignTenant(tenantId)
         }
 
-        // Consume PR open quantities if linked
+        // PR 연결 품목의 미전환 잔량 차감 — 중복 발주 방지
         consumePrQuantities(tenantId, po)
 
         return poRepository.save(po).toResponse()
     }
 
-    /** Create PO directly from an approved PR */
+    /** PR에서 PO 전환 — 승인된 PR의 미전환 잔량 품목을 일괄 발주. PR 잔량을 자동 차감 */
     @Transactional
     fun createFromPr(prId: Long, request: CreatePoFromPrRequest): PoResponse {
         val tenantId = TenantContext.getTenantId()
@@ -139,6 +147,7 @@ class PurchaseOrderService(
         return poRepository.save(po).toResponse()
     }
 
+    /** PO 품목에 연결된 PR 행의 미전환 잔량을 차감하여 이중 발주를 방지 */
     private fun consumePrQuantities(tenantId: String, po: PurchaseOrder) {
         po.lines.filter { it.prDocumentNo != null }.groupBy { it.prDocumentNo!! }.forEach { (prDocNo, poLines) ->
             val pr = prRepository.findByTenantIdAndDocumentNo(tenantId, prDocNo).orElse(null) ?: return@forEach

@@ -7,8 +7,17 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 
 /**
- * Request for Quotation (RFQ) — sent to vendors to get price quotes.
- * Links back to PR lines and forward to PO creation.
+ * 견적요청(RFQ) — 공급업체에 가격 견적을 요청하는 문서.
+ *
+ * 구매요청(PR) 승인 후 복수의 공급업체에 견적을 요청하고,
+ * 가격/납기를 비교한 뒤 최적 업체를 낙찰(award)하여 발주서(PO)를 생성한다.
+ *
+ * 상태 흐름: DRAFT → PUBLISHED → CLOSED → AWARDED
+ *
+ * 핵심 비즈니스 규칙:
+ * - 최소 1개 품목 + 1개 공급업체가 있어야 발행(publish) 가능
+ * - 견적 마감(close) 후 낙찰(award) 처리 — 1개 업체만 낙찰 가능
+ * - PR 행과 연결하여 요청 원본 추적 가능
  */
 @Entity
 @Table(name = "rfqs")
@@ -60,6 +69,7 @@ class RequestForQuotation(
         return vendor
     }
 
+    /** 발행 — 공급업체에 견적 요청 발송. 품목과 업체가 모두 등록되어야 함 */
     fun publish() {
         check(status == RfqStatus.DRAFT) { "Can only publish from DRAFT" }
         check(lines.isNotEmpty()) { "At least one line required" }
@@ -67,11 +77,13 @@ class RequestForQuotation(
         status = RfqStatus.PUBLISHED
     }
 
+    /** 마감 — 견적 접수 기간 종료. 이후 낙찰 처리 가능 */
     fun close() {
         check(status == RfqStatus.PUBLISHED) { "Can only close from PUBLISHED" }
         status = RfqStatus.CLOSED
     }
 
+    /** 낙찰 — 최적 공급업체를 선정. 해당 업체의 견적 기준으로 PO 생성 가능 */
     fun award(vendorCode: String) {
         check(status == RfqStatus.CLOSED) { "Can only award from CLOSED" }
         vendors.forEach { v ->
@@ -81,6 +93,7 @@ class RequestForQuotation(
     }
 }
 
+/** 견적요청 품목 행 — 견적을 요청할 개별 품목. PR 행과 연결 가능 */
 @Entity
 @Table(name = "rfq_lines")
 class RfqLine(
@@ -113,6 +126,10 @@ class RfqLine(
 
 ) : TenantEntity()
 
+/**
+ * 견적 참여 공급업체 — RFQ에 초대된 공급업체.
+ * 각 업체가 품목별 단가/납기를 제출(submitQuotation)하면 비교 평가 가능.
+ */
 @Entity
 @Table(name = "rfq_vendors")
 class RfqVendor(
@@ -136,6 +153,7 @@ class RfqVendor(
     @OneToMany(mappedBy = "rfqVendor", cascade = [CascadeType.ALL], orphanRemoval = true)
     val quotationLines: MutableList<QuotationLine> = mutableListOf()
 
+    /** 견적 제출 — 공급업체가 품목별 단가와 납기를 회신. 동일 행 재제출 시 덮어쓰기 */
     fun submitQuotation(lineNo: Int, unitPrice: BigDecimal, leadTimeDays: Int? = null, remark: String? = null) {
         quotationLines.removeIf { it.rfqLineNo == lineNo }
         quotationLines.add(QuotationLine(
@@ -146,6 +164,7 @@ class RfqVendor(
     }
 }
 
+/** 견적 응답 행 — 공급업체가 제출한 품목별 단가/납기 정보 */
 @Entity
 @Table(name = "quotation_lines")
 class QuotationLine(
@@ -167,6 +186,7 @@ class QuotationLine(
 
 ) : TenantEntity()
 
+/** 견적요청 상태: 작성중 → 발행 → 마감 → 낙찰/취소 */
 enum class RfqStatus {
     DRAFT, PUBLISHED, CLOSED, AWARDED, CANCELLED
 }

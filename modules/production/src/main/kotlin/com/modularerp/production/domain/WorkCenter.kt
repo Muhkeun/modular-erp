@@ -5,8 +5,15 @@ import jakarta.persistence.*
 import java.math.BigDecimal
 
 /**
- * Work Center — a production resource (machine, line, station).
- * Defines capacity and cost rates for production scheduling.
+ * 작업장(Work Center) — 생산 자원(설비, 라인, 작업 스테이션).
+ *
+ * 생산 스케줄링과 원가 계산의 기본 단위.
+ * 일일 가용 시간(capacityPerDay)과 병렬 자원 수(resourceCount)로
+ * 총 일일 가용 능력을 산출하며, 시간당 비용으로 제조원가를 계산한다.
+ *
+ * 핵심 비즈니스 규칙:
+ * - 총 일일능력 = 일일가동시간 × 병렬자원수
+ * - 설비보전(MAINTENANCE) 상태에서는 생산 스케줄 배정 불가
  */
 @Entity
 @Table(name = "work_centers")
@@ -25,15 +32,15 @@ class WorkCenter(
     @Column(nullable = false, length = 20)
     var centerType: WorkCenterType = WorkCenterType.MACHINE,
 
-    /** Available hours per day */
+    /** 일일 가용시간(시간/일) — 교대 근무 시 조정 가능 */
     @Column(nullable = false, precision = 5, scale = 2)
     var capacityPerDay: BigDecimal = BigDecimal("8.00"),
 
-    /** Number of parallel resources (e.g. 3 identical machines) */
+    /** 병렬 자원 수 (예: 동일 설비 3대) — 동시 작업 가능 수 */
     @Column(nullable = false)
     var resourceCount: Int = 1,
 
-    /** Cost per hour (labor + machine) */
+    /** 시간당 원가 (인건비 + 설비비) — 제조원가 산출에 사용 */
     @Column(nullable = false, precision = 19, scale = 4)
     var costPerHour: BigDecimal = BigDecimal.ZERO,
 

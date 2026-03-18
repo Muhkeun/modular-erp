@@ -6,8 +6,18 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 /**
- * Purchase Order (PO) — a formal order sent to a vendor.
- * Can be created from an approved PR or directly.
+ * 발주서(PO) — 공급업체에 보내는 공식 구매 주문서.
+ *
+ * 승인된 구매요청(PR)에서 전환하거나 직접 생성할 수 있다.
+ * 승인 후 공급업체에 발송(SENT)되며, 입고(GR) 완료 시 자동 완료 처리된다.
+ *
+ * 상태 흐름: DRAFT → SUBMITTED → APPROVED → SENT → COMPLETED
+ *                              ↘ REJECTED
+ *
+ * 핵심 비즈니스 규칙:
+ * - 품목별 입고수량(receivedQuantity)을 추적하여 부분입고 지원
+ * - 세금 계산: 품목별 단가 × 수량 × 세율(기본 10%)
+ * - PR과의 추적성: prDocumentNo/prLineNo로 원래 요청과 연결
  */
 @Entity
 @Table(name = "purchase_orders")
@@ -84,12 +94,14 @@ class PurchaseOrder(
         return line
     }
 
+    /** 제출 — 결재 요청 */
     fun submit() {
         check(status == PoStatus.DRAFT) { "Can only submit from DRAFT" }
         check(lines.isNotEmpty()) { "At least one line required" }
         status = PoStatus.SUBMITTED
     }
 
+    /** 승인 — 이벤트 발행으로 물류 모듈에 입고 준비 알림 */
     fun approve() {
         check(status == PoStatus.SUBMITTED) { "Can only approve from SUBMITTED" }
         status = PoStatus.APPROVED
@@ -100,16 +112,23 @@ class PurchaseOrder(
         status = PoStatus.REJECTED
     }
 
+    /** 발송 — 공급업체에 발주서 전달 */
     fun send() {
         check(status == PoStatus.APPROVED) { "Can only send from APPROVED" }
         status = PoStatus.SENT
     }
 
+    /** 완료 — 모든 품목 입고 완료 시 마감 */
     fun complete() {
         status = PoStatus.COMPLETED
     }
 }
 
+/**
+ * 발주서 품목 행 — PO의 개별 발주 품목.
+ * 입고수량(receivedQuantity)으로 부분입고를 추적하며,
+ * 미입고 잔량(openQuantity)이 0이면 해당 품목은 입고 완료.
+ */
 @Entity
 @Table(name = "purchase_order_lines")
 class PurchaseOrderLine(
@@ -142,12 +161,12 @@ class PurchaseOrderLine(
     @Column(length = 200)
     var specification: String? = null,
 
-    /** Traceability back to PR */
+    /** 구매요청(PR) 추적 — 어떤 PR에서 전환되었는지 역추적용 */
     @Column(length = 30)
     var prDocumentNo: String? = null,
     var prLineNo: Int? = null,
 
-    /** Received quantity tracking */
+    /** 누적 입고수량 — GR 확정 시 증가, 발주수량 대비 입고 진행률 추적 */
     @Column(nullable = false, precision = 15, scale = 4)
     var receivedQuantity: BigDecimal = BigDecimal.ZERO
 
@@ -162,6 +181,7 @@ class PurchaseOrderLine(
     val openQuantity: BigDecimal
         get() = quantity.subtract(receivedQuantity)
 
+    /** 입고 처리 — 미입고 잔량을 초과하는 입고는 불가 (과입고 방지) */
     fun receive(qty: BigDecimal) {
         require(qty <= openQuantity) { "Cannot receive more than open quantity ($openQuantity)" }
         receivedQuantity = receivedQuantity.add(qty)
@@ -171,6 +191,7 @@ class PurchaseOrderLine(
         get() = receivedQuantity >= quantity
 }
 
+/** 발주서 상태: 작성중 → 제출 → 승인/반려 → 발송 → 완료/취소 */
 enum class PoStatus {
     DRAFT, SUBMITTED, APPROVED, REJECTED, SENT, COMPLETED, CANCELLED
 }

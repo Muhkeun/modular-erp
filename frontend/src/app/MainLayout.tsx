@@ -4,7 +4,7 @@ import { useAuth } from "../shared/hooks/useAuth";
 import {
   LayoutGrid, Package, ShoppingCart, Truck, DollarSign, Users,
   ClipboardCheck, Building2, ChevronDown, ChevronRight, LogOut,
-  Search, Bell, Menu, X, Settings,
+  Search, Bell, Menu, X, Settings, Factory, CalendarClock,
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -40,6 +40,22 @@ const navigation: NavItem[] = [
       { label: "Goods Receipt", path: "/logistics/gr" },
       { label: "Goods Issue", path: "/logistics/gi" },
       { label: "Stock Overview", path: "/logistics/stock" },
+    ],
+  },
+  {
+    label: "Production", icon: <Factory size={20} />,
+    children: [
+      { label: "Work Orders", path: "/production/work-orders" },
+      { label: "Work Centers", path: "/production/work-centers" },
+      { label: "Routings", path: "/production/routings" },
+    ],
+  },
+  {
+    label: "Planning", icon: <CalendarClock size={20} />,
+    children: [
+      { label: "MRP", path: "/planning/mrp" },
+      { label: "Production Schedule", path: "/planning/schedule" },
+      { label: "Capacity Plan", path: "/planning/capacity" },
     ],
   },
   {

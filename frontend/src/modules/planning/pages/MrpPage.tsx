@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Play, AlertTriangle, ShoppingCart, Factory } from "lucide-react";
+import { Play, ShoppingCart, Factory } from "lucide-react";
 import PageHeader from "../../../shared/components/PageHeader";
 import api from "../../../shared/api/client";
 

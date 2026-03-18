@@ -7,7 +7,7 @@ import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
 import StatsCard from "../../../shared/components/StatsCard";
 import api from "../../../shared/api/client";
-import { Factory, Clock, CheckCircle, AlertTriangle } from "lucide-react";
+import { Factory, Clock, CheckCircle } from "lucide-react";
 
 interface WoRow {
   id: number; documentNo: string; productCode: string; productName: string;

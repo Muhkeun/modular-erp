@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef } from "react";
 import { AgGridReact } from "ag-grid-react";
-import type { ColDef, GridReadyEvent, GridApi } from "ag-grid-community";
+import type { ColDef, GridReadyEvent } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 

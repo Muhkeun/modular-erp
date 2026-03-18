@@ -1,7 +1,7 @@
-import { useMemo, useCallback } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { ColDef } from "ag-grid-community";
-import { Plus, FileText } from "lucide-react";
+import { Plus } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
 import api from "../../../shared/api/client";

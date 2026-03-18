@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import type { ColDef } from "ag-grid-community";
 import { Plus } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
@@ -22,31 +23,32 @@ const statusStyle: Record<string, string> = {
 };
 
 export default function PurchaseRequestPage() {
+  const { t } = useTranslation();
   const { data, isLoading } = useQuery({
     queryKey: ["purchase-requests"],
     queryFn: async () => (await api.get("/api/v1/purchase/requests?size=100")).data,
   });
 
   const columnDefs = useMemo<ColDef<PrRow>[]>(() => [
-    { field: "documentNo", headerName: "PR No.", flex: 1.2,
+    { field: "documentNo", headerName: t("pr.docNo"), flex: 1.2,
       cellRenderer: (p: { value: string }) => <span className="font-mono font-semibold text-brand-700">{p.value}</span> },
-    { field: "prType", headerName: "Type", flex: 0.8 },
-    { field: "companyCode", headerName: "Company", flex: 0.8 },
-    { field: "plantCode", headerName: "Plant", flex: 0.7 },
-    { field: "requestDate", headerName: "Request Date", flex: 1 },
-    { field: "deliveryDate", headerName: "Delivery Date", flex: 1 },
-    { field: "requestedBy", headerName: "Requested By", flex: 1 },
-    { field: "totalAmount", headerName: "Total", flex: 1, type: "numericColumn",
+    { field: "prType", headerName: t("common.type"), flex: 0.8 },
+    { field: "companyCode", headerName: t("nav.companies"), flex: 0.8 },
+    { field: "plantCode", headerName: t("gr.plant"), flex: 0.7 },
+    { field: "requestDate", headerName: t("pr.requestDate"), flex: 1 },
+    { field: "deliveryDate", headerName: t("pr.deliveryDate"), flex: 1 },
+    { field: "requestedBy", headerName: t("pr.requestedBy"), flex: 1 },
+    { field: "totalAmount", headerName: t("pr.totalAmount"), flex: 1, type: "numericColumn",
       valueFormatter: (p: { value: number }) => p.value?.toLocaleString("ko-KR", { style: "currency", currency: "KRW", maximumFractionDigits: 0 }) },
-    { field: "status", headerName: "Status", flex: 0.8,
-      cellRenderer: (p: { value: string }) => <span className={statusStyle[p.value] || "badge"}>{p.value}</span> },
-  ], []);
+    { field: "status", headerName: t("common.status"), flex: 0.8,
+      cellRenderer: (p: { value: string }) => <span className={statusStyle[p.value] || "badge"}>{t("status." + p.value, p.value)}</span> },
+  ], [t]);
 
   return (
     <div>
-      <PageHeader title="Purchase Requests" description="Create and manage purchase requisitions"
-        breadcrumbs={[{ label: "Procurement" }, { label: "Purchase Requests" }]}
-        actions={<button className="btn-primary"><Plus size={16} /> New PR</button>} />
+      <PageHeader title={t("pr.title")} description={t("pr.description")}
+        breadcrumbs={[{ label: t("nav.procurement") }, { label: t("nav.purchaseRequests") }]}
+        actions={<button className="btn-primary"><Plus size={16} /> {t("pr.newPr")}</button>} />
       <div className="card overflow-hidden">
         <DataGrid<PrRow> rowData={data?.data || []} columnDefs={columnDefs} loading={isLoading} />
       </div>

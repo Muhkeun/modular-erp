@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Play, CheckCircle, Package, Clock } from "lucide-react";
 import PageHeader from "../../../shared/components/PageHeader";
 import api from "../../../shared/api/client";
@@ -13,6 +14,7 @@ const statusColors: Record<string, string> = {
 export default function WorkOrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const { data } = useQuery({
     queryKey: ["work-order", id],
@@ -28,13 +30,13 @@ export default function WorkOrderDetailPage() {
   return (
     <div>
       <PageHeader
-        title={`Work Order — ${wo.documentNo}`}
-        breadcrumbs={[{ label: "Production" }, { label: "Work Orders", path: "/production/work-orders" }, { label: wo.documentNo }]}
+        title={`${t("wo.title")} — ${wo.documentNo}`}
+        breadcrumbs={[{ label: t("nav.production") }, { label: t("nav.workOrders"), path: "/production/work-orders" }, { label: wo.documentNo }]}
         actions={
           <>
-            <button className="btn-secondary" onClick={() => navigate("/production/work-orders")}><ArrowLeft size={16} /> Back</button>
-            {wo.status === "RELEASED" && <button className="btn-primary"><Play size={16} /> Start Production</button>}
-            {wo.status === "IN_PROGRESS" && <button className="btn-primary"><CheckCircle size={16} /> Report Output</button>}
+            <button className="btn-secondary" onClick={() => navigate("/production/work-orders")}><ArrowLeft size={16} /> {t("common.back")}</button>
+            {wo.status === "RELEASED" && <button className="btn-primary"><Play size={16} /> {t("wo.startProduction")}</button>}
+            {wo.status === "IN_PROGRESS" && <button className="btn-primary"><CheckCircle size={16} /> {t("wo.reportOutput")}</button>}
           </>
         }
       />
@@ -42,30 +44,30 @@ export default function WorkOrderDetailPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
         <div className="card p-5">
-          <p className="text-xs font-medium text-slate-500 uppercase">Product</p>
+          <p className="text-xs font-medium text-slate-500 uppercase">{t("wo.product")}</p>
           <p className="mt-1 text-lg font-bold text-slate-900">{wo.productName}</p>
           <p className="text-sm text-slate-500 font-mono">{wo.productCode}</p>
         </div>
         <div className="card p-5">
-          <p className="text-xs font-medium text-slate-500 uppercase">Progress</p>
+          <p className="text-xs font-medium text-slate-500 uppercase">{t("wo.progress")}</p>
           <p className="mt-1 text-lg font-bold text-slate-900">{wo.completedQuantity} / {wo.plannedQuantity} {wo.unitOfMeasure}</p>
           <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
             <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${progressPct}%` }} />
           </div>
         </div>
         <div className="card p-5">
-          <p className="text-xs font-medium text-slate-500 uppercase">Yield Rate</p>
+          <p className="text-xs font-medium text-slate-500 uppercase">{t("wo.yield")}</p>
           <p className={`mt-1 text-lg font-bold ${wo.yieldRate >= 0.95 ? "text-emerald-600" : "text-red-600"}`}>
             {(wo.yieldRate * 100).toFixed(1)}%
           </p>
-          <p className="text-sm text-slate-500">Scrap: {wo.scrapQuantity}</p>
+          <p className="text-sm text-slate-500">{t("wo.scrap")}: {wo.scrapQuantity}</p>
         </div>
         <div className="card p-5">
-          <p className="text-xs font-medium text-slate-500 uppercase">Status</p>
+          <p className="text-xs font-medium text-slate-500 uppercase">{t("common.status")}</p>
           <span className={`mt-2 inline-block rounded-lg px-3 py-1.5 text-sm font-semibold ${statusColors[wo.status] || ""}`}>
-            {wo.status}
+            {String(t("status." + wo.status, wo.status))}
           </span>
-          <p className="mt-1 text-xs text-slate-400">Priority: {wo.priority}</p>
+          <p className="mt-1 text-xs text-slate-400">{t("wo.priority")}: {wo.priority}</p>
         </div>
       </div>
 
@@ -74,11 +76,11 @@ export default function WorkOrderDetailPage() {
         <div className="card">
           <div className="border-b border-slate-100 px-6 py-4 flex items-center gap-2">
             <Clock size={18} className="text-slate-400" />
-            <h3 className="text-base font-semibold text-slate-900">Operations</h3>
+            <h3 className="text-base font-semibold text-slate-900">{t("wo.operations")}</h3>
           </div>
           <div className="divide-y divide-slate-50">
             {wo.operations.length === 0 ? (
-              <p className="px-6 py-8 text-sm text-slate-400 text-center">No operations defined</p>
+              <p className="px-6 py-8 text-sm text-slate-400 text-center">{t("common.noData")}</p>
             ) : wo.operations.map((op: any) => (
               <div key={op.operationNo} className="px-6 py-4 flex items-center gap-4">
                 <div className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold ${statusColors[op.status] || "bg-slate-50"}`}>
@@ -90,9 +92,9 @@ export default function WorkOrderDetailPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold">{op.completedQuantity} done</p>
-                  {op.scrapQuantity > 0 && <p className="text-xs text-red-500">{op.scrapQuantity} scrap</p>}
+                  {op.scrapQuantity > 0 && <p className="text-xs text-red-500">{op.scrapQuantity} {t("wo.scrap").toLowerCase()}</p>}
                 </div>
-                <span className={`badge ${statusColors[op.status] || ""}`}>{op.status}</span>
+                <span className={`badge ${statusColors[op.status] || ""}`}>{String(t("status." + op.status, op.status))}</span>
               </div>
             ))}
           </div>
@@ -102,11 +104,11 @@ export default function WorkOrderDetailPage() {
         <div className="card">
           <div className="border-b border-slate-100 px-6 py-4 flex items-center gap-2">
             <Package size={18} className="text-slate-400" />
-            <h3 className="text-base font-semibold text-slate-900">Material Requirements</h3>
+            <h3 className="text-base font-semibold text-slate-900">{t("wo.materials")}</h3>
           </div>
           <div className="divide-y divide-slate-50">
             {wo.materials.length === 0 ? (
-              <p className="px-6 py-8 text-sm text-slate-400 text-center">No materials defined</p>
+              <p className="px-6 py-8 text-sm text-slate-400 text-center">{t("common.noData")}</p>
             ) : wo.materials.map((mat: any) => (
               <div key={mat.itemCode} className="px-6 py-4">
                 <div className="flex items-center justify-between">
@@ -117,7 +119,7 @@ export default function WorkOrderDetailPage() {
                   <div className="text-right">
                     <p className="text-sm"><span className="font-semibold">{mat.issuedQuantity}</span> / {mat.requiredQuantity} {mat.unitOfMeasure}</p>
                     {mat.shortageQuantity > 0 && (
-                      <p className="text-xs text-red-600 font-medium">Shortage: {mat.shortageQuantity}</p>
+                      <p className="text-xs text-red-600 font-medium">{t("wo.shortage")}: {mat.shortageQuantity}</p>
                     )}
                   </div>
                 </div>

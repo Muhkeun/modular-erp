@@ -1,45 +1,48 @@
+import { useTranslation } from "react-i18next";
 import PageHeader from "../../../shared/components/PageHeader";
 import StatsCard from "../../../shared/components/StatsCard";
 import { Package, ShoppingCart, Truck, DollarSign, TrendingUp, AlertTriangle, Clock, CheckCircle } from "lucide-react";
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
+
   return (
     <div>
       <PageHeader
-        title="Dashboard"
-        description="Overview of your enterprise operations"
+        title={t("dashboard.title")}
+        description={t("dashboard.description")}
       />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
         <StatsCard
-          title="Open Purchase Orders"
+          title={t("dashboard.openPo")}
           value="23"
-          change="+3 from last week"
+          change={"+3 " + t("dashboard.fromLastWeek")}
           changeType="neutral"
           icon={<ShoppingCart size={22} />}
           iconColor="bg-blue-50 text-blue-600"
         />
         <StatsCard
-          title="Pending Deliveries"
+          title={t("dashboard.pendingDelivery")}
           value="12"
-          change="5 overdue"
+          change={"5 " + t("dashboard.overdue")}
           changeType="negative"
           icon={<Truck size={22} />}
           iconColor="bg-amber-50 text-amber-600"
         />
         <StatsCard
-          title="Monthly Revenue"
+          title={t("dashboard.monthlyRevenue")}
           value="₩2.4B"
-          change="+12.5% vs last month"
+          change={"+12.5% " + t("dashboard.vsLastMonth")}
           changeType="positive"
           icon={<DollarSign size={22} />}
           iconColor="bg-emerald-50 text-emerald-600"
         />
         <StatsCard
-          title="Items in Stock"
+          title={t("dashboard.stockItems")}
           value="1,847"
-          change="32 below reorder point"
+          change={"32 " + t("dashboard.belowReorder")}
           changeType="negative"
           icon={<Package size={22} />}
           iconColor="bg-purple-50 text-purple-600"
@@ -51,7 +54,7 @@ export default function DashboardPage() {
         {/* Pending Approvals */}
         <div className="card lg:col-span-2">
           <div className="border-b border-slate-100 px-6 py-4">
-            <h2 className="text-base font-semibold text-slate-900">Pending Approvals</h2>
+            <h2 className="text-base font-semibold text-slate-900">{t("dashboard.pendingApprovals")}</h2>
           </div>
           <div className="divide-y divide-slate-50">
             {[
@@ -67,7 +70,7 @@ export default function DashboardPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-slate-900">{item.doc}</span>
-                    {item.status === "urgent" && <span className="badge-danger">Urgent</span>}
+                    {item.status === "urgent" && <span className="badge-danger">{t("status.URGENT") || "Urgent"}</span>}
                   </div>
                   <p className="text-sm text-slate-500 truncate">{item.title}</p>
                 </div>
@@ -80,7 +83,7 @@ export default function DashboardPage() {
           </div>
           <div className="border-t border-slate-100 px-6 py-3">
             <button className="text-sm text-brand-600 hover:text-brand-700 font-medium">
-              View all approvals →
+              {t("dashboard.viewAll")}
             </button>
           </div>
         </div>
@@ -88,13 +91,13 @@ export default function DashboardPage() {
         {/* Quick Status */}
         <div className="space-y-5">
           <div className="card p-6">
-            <h2 className="text-base font-semibold text-slate-900 mb-4">System Status</h2>
+            <h2 className="text-base font-semibold text-slate-900 mb-4">{t("dashboard.systemStatus")}</h2>
             <div className="space-y-3">
               {[
-                { label: "Procurement", icon: <CheckCircle size={16} />, status: "Operational", color: "text-emerald-500" },
-                { label: "Logistics", icon: <AlertTriangle size={16} />, status: "3 delayed GR", color: "text-amber-500" },
-                { label: "Finance", icon: <Clock size={16} />, status: "Month-end close", color: "text-blue-500" },
-                { label: "Sales", icon: <TrendingUp size={16} />, status: "On track", color: "text-emerald-500" },
+                { label: t("nav.procurement"), icon: <CheckCircle size={16} />, status: t("dashboard.operational"), color: "text-emerald-500" },
+                { label: t("nav.logistics"), icon: <AlertTriangle size={16} />, status: "3 " + t("dashboard.delayed"), color: "text-amber-500" },
+                { label: t("nav.finance"), icon: <Clock size={16} />, status: t("dashboard.monthEndClose"), color: "text-blue-500" },
+                { label: t("nav.sales"), icon: <TrendingUp size={16} />, status: t("dashboard.onTrack"), color: "text-emerald-500" },
               ].map((s) => (
                 <div key={s.label} className="flex items-center justify-between py-2">
                   <span className="text-sm text-slate-600">{s.label}</span>
@@ -107,7 +110,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="card p-6">
-            <h2 className="text-base font-semibold text-slate-900 mb-4">Recent Activity</h2>
+            <h2 className="text-base font-semibold text-slate-900 mb-4">{t("dashboard.recentActivity")}</h2>
             <div className="space-y-4">
               {[
                 { action: "PO-202603-00044 approved", time: "10 min ago" },

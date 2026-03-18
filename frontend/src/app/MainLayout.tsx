@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../shared/hooks/useAuth";
 import {
   LayoutGrid, Package, ShoppingCart, Truck, DollarSign, Users,
@@ -9,75 +10,76 @@ import {
 import { clsx } from "clsx";
 
 interface NavItem {
-  label: string;
+  labelKey: string;
   icon: React.ReactNode;
   path?: string;
-  children?: { label: string; path: string }[];
+  children?: { labelKey: string; path: string }[];
 }
 
 const navigation: NavItem[] = [
-  { label: "Dashboard", icon: <LayoutGrid size={20} />, path: "/dashboard" },
+  { labelKey: "nav.dashboard", icon: <LayoutGrid size={20} />, path: "/dashboard" },
   {
-    label: "Master Data", icon: <Package size={20} />,
+    labelKey: "nav.masterData", icon: <Package size={20} />,
     children: [
-      { label: "Items", path: "/master-data/items" },
-      { label: "Vendors", path: "/master-data/vendors" },
-      { label: "Customers", path: "/master-data/customers" },
-      { label: "Companies", path: "/master-data/companies" },
+      { labelKey: "nav.items", path: "/master-data/items" },
+      { labelKey: "nav.vendors", path: "/master-data/vendors" },
+      { labelKey: "nav.customers", path: "/master-data/customers" },
+      { labelKey: "nav.companies", path: "/master-data/companies" },
     ],
   },
   {
-    label: "Procurement", icon: <ShoppingCart size={20} />,
+    labelKey: "nav.procurement", icon: <ShoppingCart size={20} />,
     children: [
-      { label: "Purchase Requests", path: "/purchase/requests" },
-      { label: "RFQ", path: "/purchase/rfq" },
-      { label: "Purchase Orders", path: "/purchase/orders" },
+      { labelKey: "nav.purchaseRequests", path: "/purchase/requests" },
+      { labelKey: "nav.rfq", path: "/purchase/rfq" },
+      { labelKey: "nav.purchaseOrders", path: "/purchase/orders" },
     ],
   },
   {
-    label: "Logistics", icon: <Truck size={20} />,
+    labelKey: "nav.logistics", icon: <Truck size={20} />,
     children: [
-      { label: "Goods Receipt", path: "/logistics/gr" },
-      { label: "Goods Issue", path: "/logistics/gi" },
-      { label: "Stock Overview", path: "/logistics/stock" },
+      { labelKey: "nav.goodsReceipt", path: "/logistics/gr" },
+      { labelKey: "nav.goodsIssue", path: "/logistics/gi" },
+      { labelKey: "nav.stockOverview", path: "/logistics/stock" },
     ],
   },
   {
-    label: "Production", icon: <Factory size={20} />,
+    labelKey: "nav.production", icon: <Factory size={20} />,
     children: [
-      { label: "Work Orders", path: "/production/work-orders" },
-      { label: "Work Centers", path: "/production/work-centers" },
-      { label: "Routings", path: "/production/routings" },
+      { labelKey: "nav.workOrders", path: "/production/work-orders" },
+      { labelKey: "nav.workCenters", path: "/production/work-centers" },
+      { labelKey: "nav.routings", path: "/production/routings" },
     ],
   },
   {
-    label: "Planning", icon: <CalendarClock size={20} />,
+    labelKey: "nav.planning", icon: <CalendarClock size={20} />,
     children: [
-      { label: "MRP", path: "/planning/mrp" },
-      { label: "Production Schedule", path: "/planning/schedule" },
-      { label: "Capacity Plan", path: "/planning/capacity" },
+      { labelKey: "nav.mrp", path: "/planning/mrp" },
+      { labelKey: "nav.schedule", path: "/planning/schedule" },
+      { labelKey: "nav.capacity", path: "/planning/capacity" },
     ],
   },
   {
-    label: "Sales", icon: <DollarSign size={20} />,
+    labelKey: "nav.sales", icon: <DollarSign size={20} />,
     children: [
-      { label: "Sales Orders", path: "/sales/orders" },
-      { label: "Invoices", path: "/sales/invoices" },
+      { labelKey: "nav.salesOrders", path: "/sales/orders" },
+      { labelKey: "nav.invoices", path: "/sales/invoices" },
     ],
   },
   {
-    label: "Finance", icon: <Building2 size={20} />,
+    labelKey: "nav.finance", icon: <Building2 size={20} />,
     children: [
-      { label: "Journal Entries", path: "/account/journal" },
-      { label: "Budget", path: "/account/budget" },
+      { labelKey: "nav.journalEntries", path: "/account/journal" },
+      { labelKey: "nav.budget", path: "/account/budget" },
     ],
   },
-  { label: "HR", icon: <Users size={20} />, path: "/hr" },
-  { label: "Quality", icon: <ClipboardCheck size={20} />, path: "/quality" },
+  { labelKey: "nav.hr", icon: <Users size={20} />, path: "/hr" },
+  { labelKey: "nav.quality", icon: <ClipboardCheck size={20} />, path: "/quality" },
 ];
 
 function NavGroup({ item }: { item: NavItem }) {
   const location = useLocation();
+  const { t } = useTranslation();
   const isActive = item.path
     ? location.pathname === item.path
     : item.children?.some((c) => location.pathname.startsWith(c.path));
@@ -93,7 +95,7 @@ function NavGroup({ item }: { item: NavItem }) {
             : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
         )}>
         <span className={clsx(isActive ? "text-brand-600" : "text-slate-400")}>{item.icon}</span>
-        {item.label}
+        {t(item.labelKey)}
       </Link>
     );
   }
@@ -108,7 +110,7 @@ function NavGroup({ item }: { item: NavItem }) {
             : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
         )}>
         <span className={clsx(isActive ? "text-brand-600" : "text-slate-400")}>{item.icon}</span>
-        <span className="flex-1 text-left">{item.label}</span>
+        <span className="flex-1 text-left">{t(item.labelKey)}</span>
         {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
       </button>
       {open && (
@@ -123,7 +125,7 @@ function NavGroup({ item }: { item: NavItem }) {
                     ? "bg-brand-50 text-brand-700 font-medium"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                 )}>
-                {child.label}
+                {t(child.labelKey)}
               </Link>
             );
           })}
@@ -135,6 +137,7 @@ function NavGroup({ item }: { item: NavItem }) {
 
 export default function MainLayout() {
   const { name, tenantId, logout } = useAuth();
+  const { t, i18n } = useTranslation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
@@ -158,7 +161,7 @@ export default function MainLayout() {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
           {navigation.map((item) => (
-            <NavGroup key={item.label} item={item} />
+            <NavGroup key={item.labelKey} item={item} />
           ))}
         </nav>
 
@@ -189,10 +192,13 @@ export default function MainLayout() {
             </button>
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input placeholder="Search..." className="input pl-9 w-72 bg-slate-50 border-slate-200" />
+              <input placeholder={t("common.search") + "..."} className="input pl-9 w-72 bg-slate-50 border-slate-200" />
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button onClick={() => { const next = i18n.language === "ko" ? "en" : "ko"; i18n.changeLanguage(next); localStorage.setItem("locale", next); }} className="btn-ghost text-xs font-bold px-2">
+              {i18n.language === "ko" ? "EN" : "KO"}
+            </button>
             <button className="relative text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-50">
               <Bell size={20} />
               <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import type { ColDef } from "ag-grid-community";
 import { Plus } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
@@ -17,29 +18,30 @@ const statusStyle: Record<string, string> = {
 };
 
 export default function EmployeePage() {
+  const { t } = useTranslation();
   const { data, isLoading } = useQuery({
     queryKey: ["employees"],
     queryFn: async () => (await api.get("/api/v1/hr/employees?size=100")).data,
   });
 
   const columnDefs = useMemo<ColDef<EmpRow>[]>(() => [
-    { field: "employeeNo", headerName: "Emp No.", flex: 0.8,
+    { field: "employeeNo", headerName: t("emp.empNo"), flex: 0.8,
       cellRenderer: (p: { value: string }) => <span className="font-mono font-semibold text-brand-700">{p.value}</span> },
-    { field: "name", headerName: "Name", flex: 1.5 },
-    { field: "departmentName", headerName: "Department", flex: 1.2 },
-    { field: "positionTitle", headerName: "Position", flex: 1 },
-    { field: "email", headerName: "Email", flex: 1.5 },
-    { field: "phone", headerName: "Phone", flex: 1 },
-    { field: "hireDate", headerName: "Hire Date", flex: 1 },
-    { field: "status", headerName: "Status", flex: 0.8,
-      cellRenderer: (p: { value: string }) => <span className={statusStyle[p.value] || "badge"}>{p.value}</span> },
-  ], []);
+    { field: "name", headerName: t("emp.name"), flex: 1.5 },
+    { field: "departmentName", headerName: t("emp.department"), flex: 1.2 },
+    { field: "positionTitle", headerName: t("emp.position"), flex: 1 },
+    { field: "email", headerName: t("emp.email"), flex: 1.5 },
+    { field: "phone", headerName: t("emp.phone"), flex: 1 },
+    { field: "hireDate", headerName: t("emp.hireDate"), flex: 1 },
+    { field: "status", headerName: t("common.status"), flex: 0.8,
+      cellRenderer: (p: { value: string }) => <span className={statusStyle[p.value] || "badge"}>{t("status." + p.value, p.value)}</span> },
+  ], [t]);
 
   return (
     <div>
-      <PageHeader title="Employees" description="Human resources management"
-        breadcrumbs={[{ label: "HR" }, { label: "Employees" }]}
-        actions={<button className="btn-primary"><Plus size={16} /> New Employee</button>} />
+      <PageHeader title={t("emp.title")} description={t("emp.description")}
+        breadcrumbs={[{ label: t("nav.hr") }, { label: t("emp.title") }]}
+        actions={<button className="btn-primary"><Plus size={16} /> {t("emp.newEmp")}</button>} />
       <div className="card overflow-hidden">
         <DataGrid<EmpRow> rowData={data?.data || []} columnDefs={columnDefs} loading={isLoading} />
       </div>

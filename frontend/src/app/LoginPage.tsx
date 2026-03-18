@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../shared/hooks/useAuth";
 import api from "../shared/api/client";
 import { LayoutGrid } from "lucide-react";
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const { t } = useTranslation();
   const [form, setForm] = useState({ tenantId: "DEFAULT", loginId: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,7 +22,7 @@ export default function LoginPage() {
         window.location.href = "/";
       }
     } catch {
-      setError("Login failed. Please check your credentials.");
+      setError(t("auth.loginFailed"));
     } finally {
       setLoading(false);
     }
@@ -35,19 +37,25 @@ export default function LoginPage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
               <LayoutGrid className="h-7 w-7 text-white" />
             </div>
-            <span className="text-2xl font-bold tracking-tight">ModularERP</span>
+            <span className="text-2xl font-bold tracking-tight">{t("auth.brandTitle")}</span>
           </div>
           <h1 className="text-4xl font-bold leading-tight mb-4">
-            Modern Enterprise Resource Planning
+            {t("auth.brandTitle")}
           </h1>
-          <p className="text-brand-100 text-lg leading-relaxed">
-            Modular, extensible, and built for the modern enterprise.
-            Manage your entire business from a single platform.
+          <p className="text-brand-100 text-lg leading-relaxed whitespace-pre-line">
+            {t("auth.brandDesc")}
           </p>
           <div className="mt-12 grid grid-cols-2 gap-4">
-            {["Procurement", "Inventory", "Sales", "Finance", "HR", "Quality"].map((m) => (
-              <div key={m} className="rounded-lg bg-white/10 backdrop-blur px-4 py-3 text-sm font-medium">
-                {m}
+            {([
+              ["nav.procurement", "Procurement"],
+              ["nav.logistics", "Inventory"],
+              ["nav.sales", "Sales"],
+              ["nav.finance", "Finance"],
+              ["nav.hr", "HR"],
+              ["nav.quality", "Quality"],
+            ] as const).map(([key]) => (
+              <div key={key} className="rounded-lg bg-white/10 backdrop-blur px-4 py-3 text-sm font-medium">
+                {t(key)}
               </div>
             ))}
           </div>
@@ -64,22 +72,22 @@ export default function LoginPage() {
             <span className="text-xl font-bold text-slate-900">ModularERP</span>
           </div>
 
-          <h2 className="text-2xl font-bold text-slate-900 mb-1">Welcome back</h2>
-          <p className="text-slate-500 mb-8">Sign in to your account</p>
+          <h2 className="text-2xl font-bold text-slate-900 mb-1">{t("auth.welcome")}</h2>
+          <p className="text-slate-500 mb-8">{t("auth.signInDesc")}</p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Tenant</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("auth.tenant")}</label>
               <input className="input" value={form.tenantId}
                 onChange={(e) => setForm({ ...form, tenantId: e.target.value })} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Login ID</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("auth.loginId")}</label>
               <input className="input" value={form.loginId} autoFocus
                 onChange={(e) => setForm({ ...form, loginId: e.target.value })} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("auth.password")}</label>
               <input className="input" type="password" value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })} />
             </div>
@@ -90,7 +98,7 @@ export default function LoginPage() {
 
             <button type="submit" disabled={loading}
               className="btn-primary w-full py-2.5">
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? t("common.signingIn") : t("auth.signIn")}
             </button>
           </form>
         </div>

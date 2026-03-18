@@ -18,6 +18,7 @@ allprojects {
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "org.jetbrains.kotlin.plugin.spring")
+    apply(plugin = "org.jetbrains.kotlin.plugin.jpa")
     apply(plugin = "io.spring.dependency-management")
 
     the<io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension>().apply {

@@ -49,16 +49,17 @@ spring:
       on-profile: postgres
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/modularerp
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/modularerp}
     driver-class-name: org.postgresql.Driver
-    username: ${DB_USERNAME:modularerp}
-    password: ${DB_PASSWORD:modularerp}
+    username: ${SPRING_DATASOURCE_USERNAME:modularerp}
+    password: ${SPRING_DATASOURCE_PASSWORD:modularerp}
 
   jpa:
+    hibernate:
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
   flyway:
-    enabled: true
-    locations: classpath:db/migration
+    enabled: false

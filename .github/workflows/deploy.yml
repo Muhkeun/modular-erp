@@ -7,7 +7,7 @@ on:
 env:
   AWS_REGION: ap-northeast-2
   ECR_REPOSITORY: modular-erp
-  EC2_HOST: ${{ secrets.EC2_HOST }}
+  ECR_REGISTRY: 600627349470.dkr.ecr.ap-northeast-2.amazonaws.com
 
 jobs:
   build-and-deploy:
@@ -32,7 +32,6 @@ jobs:
 
       - name: Build and push Docker image
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
@@ -45,15 +44,44 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: ECR_REGISTRY,ECR_REPOSITORY,AWS_REGION
           script: |
             # Login to ECR
-            aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
 
-            # Pull and restart
-            cd /home/ec2-user/modular-erp
-            export ECR_IMAGE=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
-            docker compose pull app
-            docker compose up -d --remove-orphans
+            # Fetch secrets from Secrets Manager
+            DB_SECRET=$(aws secretsmanager get-secret-value --secret-id modular-erp/database --region $AWS_REGION --query SecretString --output text)
+            APP_SECRET=$(aws secretsmanager get-secret-value --secret-id modular-erp/app --region $AWS_REGION --query SecretString --output text)
+
+            DB_HOST=$(echo $DB_SECRET | python3 -c "import sys,json;print(json.load(sys.stdin)['host'])")
+            DB_USER=$(echo $DB_SECRET | python3 -c "import sys,json;print(json.load(sys.stdin)['username'])")
+            DB_PASS=$(echo $DB_SECRET | python3 -c "import sys,json;print(json.load(sys.stdin)['password'])")
+            DB_NAME=$(echo $DB_SECRET | python3 -c "import sys,json;print(json.load(sys.stdin)['dbname'])")
+            JWT_SECRET=$(echo $APP_SECRET | python3 -c "import sys,json;print(json.load(sys.stdin)['jwt_secret'])")
+
+            # Pull and run
+            docker pull $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+            # Stop existing container
+            docker stop modular-erp 2>/dev/null || true
+            docker rm modular-erp 2>/dev/null || true
+
+            # Run with secrets from Secrets Manager
+            docker run -d \
+              --name modular-erp \
+              --restart unless-stopped \
+              -p 80:8080 \
+              -e SPRING_PROFILES_ACTIVE=postgres \
+              -e SPRING_DATASOURCE_URL="jdbc:postgresql://${DB_HOST}:5432/${DB_NAME}" \
+              -e SPRING_DATASOURCE_USERNAME="${DB_USER}" \
+              -e SPRING_DATASOURCE_PASSWORD="${DB_PASS}" \
+              -e MODULAR_ERP_SECURITY_JWT_SECRET="${JWT_SECRET}" \
+              -e JAVA_OPTS="-Xms256m -Xmx512m" \
+              $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
             # Cleanup old images
             docker image prune -af
+
+            # Wait and check
+            sleep 10
+            docker logs modular-erp --tail 5

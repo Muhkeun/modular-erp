@@ -55,9 +55,7 @@ class TenantFilter(
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         val path = request.requestURI
-        return path.startsWith("/api/v1/auth/")
-            || path.startsWith("/swagger-ui")
-            || path.startsWith("/v3/api-docs")
-            || path.startsWith("/actuator")
+        // API 경로만 필터 적용, 나머지는 모두 스킵
+        return !path.startsWith("/api/") || path.startsWith("/api/v1/auth/")
     }
 }

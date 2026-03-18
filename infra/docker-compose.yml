@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: modularerp
+      POSTGRES_USER: ${DB_USERNAME:-modularerp}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-modularerp}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U modularerp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: ${ECR_IMAGE:-modular-erp:latest}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/modularerp
+      DB_USERNAME: ${DB_USERNAME:-modularerp}
+      DB_PASSWORD: ${DB_PASSWORD:-modularerp}
+      MODULAR_ERP_SECURITY_JWT_SECRET: ${JWT_SECRET:-change-this-in-production-must-be-32-bytes-long!}
+    ports:
+      - "80:8080"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

@@ -11,6 +11,14 @@ import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
+/**
+ * 입고(GR) 서비스 — 자재 입고와 재고 증가를 처리.
+ *
+ * 주요 업무 흐름:
+ * 1. PO 기반 GR 생성 — 발주서 연결로 입고 추적
+ * 2. 확정(confirm) 시 품목별 재고(StockSummary) 자동 증가
+ * 3. 해당 저장위치에 재고가 없으면 신규 StockSummary 레코드 생성
+ */
 @Service
 @Transactional(readOnly = true)
 class GoodsReceiptService(
@@ -50,7 +58,7 @@ class GoodsReceiptService(
         val gr = findGr(id)
         gr.confirm()
 
-        // Update stock for each line
+        // 품목별 재고 증가 — 저장위치에 재고가 없으면 신규 생성
         val tenantId = gr.tenantId
         gr.lines.forEach { line ->
             val stock = stockRepository.findByTenantIdAndItemCodeAndPlantCodeAndStorageLocation(

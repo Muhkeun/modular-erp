@@ -18,13 +18,15 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 /**
- * MRP Engine — the core of manufacturing planning.
+ * MRP 엔진 — 자재소요계획의 핵심 서비스.
  *
- * Process:
- * 1. Collect demand (open work orders + sales orders)
- * 2. Explode BOMs to get component requirements (gross requirements)
- * 3. Net against current stock and open POs (net requirements)
- * 4. Generate planned orders: PURCHASE for bought items, PRODUCE for made items
+ * 실행 프로세스:
+ * 1. 수요 수집 — 출고지시(RELEASED) 상태의 WO에서 미충족 자재 소요량 집계
+ * 2. 총소요량 산출 — 품목별 수요 합산
+ * 3. 순소요량 계산 — 총소요량 - 현재고 - 입고예정
+ * 4. 계획 오더 생성 — BOM 보유 품목은 PRODUCE, 미보유는 PURCHASE로 분류
+ *
+ * 결과는 MrpResult에 품목별로 저장되며, 확정(CONFIRMED) 시 실제 PR/WO로 전환된다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -43,7 +45,8 @@ class MrpService(
         mrpRunRepository.findRecent(TenantContext.getTenantId(), pageable).map { it.toResponse() }
 
     /**
-     * Execute MRP for a plant.
+     * MRP 실행 — 지정 공장의 자재소요계획을 일괄 수행.
+     * 계획 기간(planningHorizonDays) 내의 수요를 대상으로 순소요량을 계산한다.
      */
     @Transactional
     fun runMrp(request: RunMrpRequest): MrpRunResponse {
@@ -56,7 +59,7 @@ class MrpService(
             executedBy = TenantContext.getUserId()
         ).apply { assignTenant(tenantId) }
 
-        // 1. Collect demand from open work orders
+        // 1단계: 출고지시(RELEASED) WO의 미충족 소요자재에서 수요 수집
         val demand = mutableMapOf<String, DemandEntry>()
         val openWos = workOrderRepository.search(
             tenantId, WoStatus.RELEASED, request.plantCode, null, null, PageRequest.of(0, 1000)
@@ -73,7 +76,7 @@ class MrpService(
             }
         }
 
-        // 2. For each demanded item, net against stock and open orders
+        // 2단계: 품목별 현재고 차감 → 순소요량 산출 → 조치유형(구매/생산) 결정
         for ((itemCode, entry) in demand) {
             val stock = stockRepository.findByTenantIdAndItemCodeAndPlantCodeAndStorageLocation(
                 tenantId, itemCode, request.plantCode, "MAIN"

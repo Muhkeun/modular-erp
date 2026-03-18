@@ -6,7 +6,17 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 /**
- * Goods Receipt (GR) — records inbound material from a PO or return.
+ * 입고전표(GR) — 발주서(PO) 기반의 자재 입고를 기록하는 물류 전표.
+ *
+ * 공급업체로부터 자재를 수령하면 GR을 생성하고,
+ * 확정(confirm) 시 재고(StockSummary)가 증가하고 PO 입고수량이 갱신된다.
+ *
+ * 상태 흐름: DRAFT → CONFIRMED / CANCELLED
+ *
+ * 핵심 비즈니스 규칙:
+ * - 확정 시 품목별 재고 자동 증가 (재고가 없으면 신규 생성)
+ * - PO 연결(poDocumentNo)로 발주 대비 입고 진행률 추적
+ * - 취소 시 확정 전/후 모두 가능 (확정 후 취소 시 재고 차감 필요)
  */
 @Entity
 @Table(name = "goods_receipts")
@@ -66,6 +76,7 @@ class GoodsReceipt(
         return line
     }
 
+    /** 확정 — 재고 증가 처리의 트리거. 최소 1개 품목이 있어야 함 */
     fun confirm() {
         check(status == GrStatus.DRAFT) { "Can only confirm from DRAFT" }
         check(lines.isNotEmpty()) { "At least one line required" }
@@ -78,6 +89,10 @@ class GoodsReceipt(
     }
 }
 
+/**
+ * 입고전표 품목 행 — 입고되는 개별 품목의 수량/단가/저장위치.
+ * 품질검사 결과(qualityInspectionPassed)를 기록할 수 있다.
+ */
 @Entity
 @Table(name = "goods_receipt_lines")
 class GoodsReceiptLine(
@@ -115,4 +130,5 @@ class GoodsReceiptLine(
     val totalPrice: BigDecimal get() = quantity.multiply(unitPrice)
 }
 
+/** 입고전표 상태: 작성중 → 확정/취소 */
 enum class GrStatus { DRAFT, CONFIRMED, CANCELLED }

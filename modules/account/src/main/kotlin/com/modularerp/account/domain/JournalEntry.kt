@@ -6,8 +6,18 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 /**
- * Journal Entry — the fundamental accounting record.
- * Every financial transaction (GR, Invoice, Payment) creates journal entries.
+ * 분개전표(Journal Entry) — 회계의 기본 기록 단위.
+ *
+ * 모든 재무 거래(입고, 송장, 지급 등)는 분개전표를 통해 회계 처리된다.
+ * 복식부기 원칙에 따라 차변 합계와 대변 합계가 반드시 일치해야 한다.
+ *
+ * 상태 흐름: DRAFT → POSTED → REVERSED
+ *
+ * 핵심 비즈니스 규칙:
+ * - 전기(post) 시 차변 = 대변 균형 검증 (불균형 시 거부)
+ * - 최소 2개 행(차변 1 + 대변 1) 필요
+ * - 전기 취소(reverse) 시 역분개 — 원 전표는 REVERSED 상태로 전환
+ * - referenceDocNo/Type으로 원 거래 전표(GR, Invoice 등)와 연결
  */
 @Entity
 @Table(name = "journal_entries")
@@ -77,6 +87,7 @@ class JournalEntry(
         return line
     }
 
+    /** 전기 — 회계 장부에 반영. 차대 균형 + 최소 2행 검증 */
     fun post() {
         check(status == JeStatus.DRAFT) { "Can only post from DRAFT" }
         check(isBalanced) { "Journal entry must be balanced (Debit=$totalDebit, Credit=$totalCredit)" }
@@ -84,12 +95,17 @@ class JournalEntry(
         status = JeStatus.POSTED
     }
 
+    /** 역분개 — 전기된 전표를 취소. 별도 역분개 전표 생성 필요 */
     fun reverse() {
         check(status == JeStatus.POSTED) { "Can only reverse POSTED entries" }
         status = JeStatus.REVERSED
     }
 }
 
+/**
+ * 분개전표 행 — 개별 차변 또는 대변 기록.
+ * 계정코드(accountCode)와 코스트센터(costCenter)로 귀속을 지정한다.
+ */
 @Entity
 @Table(name = "journal_entry_lines")
 class JournalEntryLine(
@@ -120,5 +136,7 @@ class JournalEntryLine(
 
 ) : TenantEntity()
 
+/** 분개 유형: 수동, 입고, 출고, 송장, 지급 */
 enum class JournalEntryType { MANUAL, GOODS_RECEIPT, GOODS_ISSUE, INVOICE, PAYMENT }
+/** 분개 상태: 작성중 → 전기 → 역분개 */
 enum class JeStatus { DRAFT, POSTED, REVERSED }

@@ -8,6 +8,15 @@ import org.springframework.data.annotation.LastModifiedDate
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.Instant
 
+/**
+ * 기본 엔티티 — 모든 도메인 엔티티의 공통 상위 클래스.
+ *
+ * 제공 기능:
+ * - 자동 채번 ID (GenerationType.IDENTITY)
+ * - 감사 추적: 생성일시/수정일시, 생성자/수정자 (Spring Data Auditing)
+ * - 논리 삭제(soft delete): active 플래그로 활성/비활성 관리
+ * - equals/hashCode: ID 기반 동등성 비교
+ */
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener::class)
 abstract class BaseEntity {

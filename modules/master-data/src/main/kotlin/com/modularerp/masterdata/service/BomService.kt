@@ -12,7 +12,8 @@ import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 
 /**
- * Exploded BOM line — result of multi-level BOM explosion.
+ * BOM 전개 결과 행 — 다단계 BOM 전개(explosion)의 평탄화된 결과.
+ * level은 BOM 계층 깊이, phantom은 팬텀 품목 여부를 나타낸다.
  */
 data class ExplodedBomLine(
     val level: Int,
@@ -24,6 +25,16 @@ data class ExplodedBomLine(
     val operationNo: Int?
 )
 
+/**
+ * BOM 서비스 — 자재명세서 관리 및 다단계 BOM 전개(explosion).
+ *
+ * 주요 기능:
+ * 1. BOM 생성/확정 — 제품의 구성품 구조를 등록하고 생산에 사용 가능하게 확정
+ * 2. BOM 전개 — 재귀적으로 하위 구성품을 풀어 평탄한 자재 목록으로 변환
+ *    - 팬텀 품목은 건너뛰고 실제 자재만 목록에 포함
+ *    - 순환 참조 방지(visited set)로 무한 루프 차단
+ *    - 기준수량(baseQuantity) 비율로 소요량을 환산
+ */
 @Service
 @Transactional(readOnly = true)
 class BomService(private val bomRepository: BomRepository) {
@@ -60,9 +71,9 @@ class BomService(private val bomRepository: BomRepository) {
     }
 
     /**
-     * Multi-level BOM explosion: recursively expands all components.
-     * Phantom items are expanded (their sub-components appear directly).
-     * Returns a flat list with level indicator.
+     * 다단계 BOM 전개 — 제품의 모든 구성품을 재귀적으로 풀어 평탄한 리스트로 반환.
+     * 팬텀 품목은 자체가 아닌 하위 구성품이 직접 노출된다.
+     * WO 소요자재 생성, MRP 순소요량 계산 등에 사용된다.
      */
     fun explode(productCode: String, plantCode: String, quantity: BigDecimal): List<ExplodedBomLine> {
         val tenantId = TenantContext.getTenantId()
@@ -76,7 +87,7 @@ class BomService(private val bomRepository: BomRepository) {
         parentQty: BigDecimal, level: Int,
         result: MutableList<ExplodedBomLine>, visited: MutableSet<String>
     ) {
-        // Circular reference protection
+        // 순환 참조 방지 — A→B→A 같은 무한 루프 차단
         if (productCode in visited) return
         visited.add(productCode)
 

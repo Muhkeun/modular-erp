@@ -44,7 +44,7 @@ class WorkCenter(
     @Column(nullable = false, precision = 19, scale = 4)
     var costPerHour: BigDecimal = BigDecimal.ZERO,
 
-    /** Setup cost per operation */
+    /** 작업 준비비용 — 공정 전환 시 1회 발생하는 고정 비용 */
     @Column(nullable = false, precision = 19, scale = 4)
     var setupCost: BigDecimal = BigDecimal.ZERO,
 
@@ -57,10 +57,12 @@ class WorkCenter(
 
 ) : TenantEntity() {
 
-    /** Total daily capacity in hours */
+    /** 총 일일 가용능력(시간) = 일일가동시간 × 병렬자원수 */
     val totalDailyCapacity: BigDecimal
         get() = capacityPerDay.multiply(BigDecimal(resourceCount))
 }
 
+/** 작업장 유형: 기계, 인력, 조립라인, 검사 */
 enum class WorkCenterType { MACHINE, LABOR, ASSEMBLY_LINE, INSPECTION }
+/** 작업장 상태: 가동중, 보전중, 비활성 */
 enum class WorkCenterStatus { ACTIVE, MAINTENANCE, INACTIVE }

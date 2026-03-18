@@ -7,8 +7,18 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 
 /**
- * MRP Run — a batch execution of Material Requirements Planning.
- * Explodes BOM for demand, checks stock, generates planned orders (PR/WO).
+ * MRP 실행(MRP Run) — 자재소요계획의 일괄 실행 단위.
+ *
+ * 수요(WO 소요자재, 수주)를 기반으로 BOM을 전개하고,
+ * 현재고/입고예정을 차감하여 순소요량을 산출한 뒤
+ * 구매(PR) 또는 생산(WO) 계획 오더를 생성한다.
+ *
+ * 상태 흐름: PLANNED → EXECUTED → CONFIRMED
+ *
+ * 핵심 비즈니스 규칙:
+ * - 계획 기간(planningHorizonDays) 내의 수요만 대상
+ * - 순소요량 > 0인 품목에 대해서만 계획 오더 생성
+ * - BOM 보유 품목은 PRODUCE, 미보유 품목은 PURCHASE로 분류
  */
 @Entity
 @Table(name = "mrp_runs")
@@ -59,6 +69,12 @@ class MrpRun(
     }
 }
 
+/**
+ * MRP 결과 — 품목별 소요량 계산 결과.
+ *
+ * 총소요량(gross) - 현재고(onHand) - 입고예정(scheduled) = 순소요량(net)
+ * 순소요량 > 0이면 계획 오더 수량(plannedOrderQty)이 생성된다.
+ */
 @Entity
 @Table(name = "mrp_results")
 class MrpResult(
@@ -73,23 +89,23 @@ class MrpResult(
     @Column(nullable = false, length = 200)
     var itemName: String,
 
-    /** Total demand from WOs, SOs, forecasts */
+    /** 총소요량 — WO 소요자재, 수주, 수요예측의 합계 */
     @Column(nullable = false, precision = 15, scale = 4)
     var grossRequirement: BigDecimal,
 
-    /** Current stock on hand */
+    /** 현재고 — MRP 실행 시점의 가용 재고 */
     @Column(nullable = false, precision = 15, scale = 4)
     var onHandStock: BigDecimal,
 
-    /** Open POs + In-transit */
+    /** 입고예정 — 미입고 PO + 운송 중 수량 */
     @Column(nullable = false, precision = 15, scale = 4)
     var scheduledReceipts: BigDecimal,
 
-    /** = Gross - OnHand - Scheduled (if > 0) */
+    /** 순소요량 = 총소요량 - 현재고 - 입고예정 (0 이상) */
     @Column(nullable = false, precision = 15, scale = 4)
     var netRequirement: BigDecimal,
 
-    /** Quantity to order/produce */
+    /** 계획 오더 수량 — 발주 또는 생산해야 할 수량 */
     @Column(nullable = false, precision = 15, scale = 4)
     var plannedOrderQty: BigDecimal,
 
@@ -102,14 +118,15 @@ class MrpResult(
 
     var requiredDate: LocalDate? = null,
 
-    /** Generated document number (PR or WO) */
+    /** 생성된 문서번호 — 확정 시 실제 생성된 PR 또는 WO 번호 */
     @Column(length = 30)
     var generatedDocNo: String? = null
 
 ) : TenantEntity()
 
 /**
- * Production Schedule — calendar view of planned work orders.
+ * 생산 스케줄 — 작업장별·일자별 생산 계획 달력.
+ * WO를 작업장에 배정하고 순서(sequenceNo)를 정하여 생산 일정을 관리한다.
  */
 @Entity
 @Table(name = "production_schedules")
@@ -136,7 +153,7 @@ class ProductionSchedule(
     @Column(nullable = false, precision = 15, scale = 4)
     var plannedQuantity: BigDecimal,
 
-    /** Planned hours for this schedule slot */
+    /** 해당 스케줄 슬롯의 계획 시간(시간) */
     @Column(nullable = false, precision = 10, scale = 4)
     var plannedHours: BigDecimal,
 
@@ -149,7 +166,8 @@ class ProductionSchedule(
 ) : TenantEntity()
 
 /**
- * Capacity Plan — tracks load vs capacity per work center per day.
+ * 능력계획(CRP) — 작업장별·일자별 부하 대 가용능력 추적.
+ * 가동률(utilizationRate)과 과부하(isOverloaded) 여부로 병목을 식별한다.
  */
 @Entity
 @Table(name = "capacity_plans")
@@ -167,15 +185,15 @@ class CapacityPlan(
     @Column(nullable = false)
     var planDate: LocalDate,
 
-    /** Available capacity in hours */
+    /** 가용능력(시간) — 해당 일자에 투입 가능한 총 시간 */
     @Column(nullable = false, precision = 10, scale = 4)
     var availableHours: BigDecimal,
 
-    /** Planned load in hours */
+    /** 계획 부하(시간) — 배정된 작업의 총 소요시간 */
     @Column(nullable = false, precision = 10, scale = 4)
     var plannedLoadHours: BigDecimal = BigDecimal.ZERO,
 
-    /** Actual hours consumed */
+    /** 실적 시간 — 실제 소비된 작업 시간 */
     @Column(nullable = false, precision = 10, scale = 4)
     var actualHours: BigDecimal = BigDecimal.ZERO
 
@@ -197,6 +215,9 @@ class CapacityPlan(
     }
 }
 
+/** MRP 상태: 계획 → 실행완료 → 확정(실제 오더 생성) */
 enum class MrpStatus { PLANNED, EXECUTED, CONFIRMED }
+/** MRP 조치유형: 구매(외부조달), 생산(내부제조), 조치불필요 */
 enum class MrpActionType { PURCHASE, PRODUCE, NONE }
+/** 스케줄 상태: 계획 → 확정 → 진행중 → 완료/취소 */
 enum class ScheduleStatus { PLANNED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED }

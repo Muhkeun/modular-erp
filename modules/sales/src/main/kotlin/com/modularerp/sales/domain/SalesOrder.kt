@@ -5,6 +5,20 @@ import jakarta.persistence.*
 import java.math.BigDecimal
 import java.time.LocalDate
 
+/**
+ * 수주(SO) — 고객으로부터 받은 판매 주문서.
+ *
+ * 영업 프로세스의 핵심 전표로, 승인 후 출하(ship)와 매출 인식의 기준이 된다.
+ * 주문생산(MTO) 방식에서는 WO 생성의 트리거가 된다.
+ *
+ * 상태 흐름: DRAFT → SUBMITTED → APPROVED → SHIPPED → COMPLETED
+ *                              ↘ REJECTED
+ *
+ * 핵심 비즈니스 규칙:
+ * - 품목별 출하수량(shippedQuantity)으로 부분 출하 추적
+ * - 미출하 잔량(openQuantity) = 주문수량 - 출하수량
+ * - 세금 계산: 품목 단가 × 수량 × 세율(기본 10%)
+ */
 @Entity
 @Table(name = "sales_orders")
 class SalesOrder(
@@ -70,13 +84,23 @@ class SalesOrder(
         return line
     }
 
+    /** 제출 — 결재 요청 */
     fun submit() { check(status == SoStatus.DRAFT); status = SoStatus.SUBMITTED }
+    /** 승인 — 출하 및 생산 진행 가능 */
     fun approve() { check(status == SoStatus.SUBMITTED); status = SoStatus.APPROVED }
+    /** 반려 */
     fun reject() { check(status == SoStatus.SUBMITTED); status = SoStatus.REJECTED }
+    /** 출하 — 물류에서 GI 처리 후 상태 전환 */
     fun ship() { check(status == SoStatus.APPROVED); status = SoStatus.SHIPPED }
+    /** 완료 — 대금 수령 후 최종 마감 */
     fun complete() { status = SoStatus.COMPLETED }
 }
 
+/**
+ * 수주 품목 행 — SO의 개별 판매 품목.
+ * 출하수량(shippedQuantity)으로 부분 출하를 추적하며,
+ * 미출하 잔량(openQuantity)이 0이면 해당 품목은 출하 완료.
+ */
 @Entity
 @Table(name = "sales_order_lines")
 class SalesOrderLine(
@@ -111,4 +135,5 @@ class SalesOrderLine(
     val openQuantity: BigDecimal get() = quantity.subtract(shippedQuantity)
 }
 
+/** 수주 상태: 작성중 → 제출 → 승인/반려 → 출하 → 완료/취소 */
 enum class SoStatus { DRAFT, SUBMITTED, APPROVED, REJECTED, SHIPPED, COMPLETED, CANCELLED }

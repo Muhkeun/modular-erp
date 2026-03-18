@@ -1,29 +1,61 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { ColDef } from "ag-grid-community";
-import { Plus } from "lucide-react";
+import { Plus, ArrowLeft } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
 import api from "../../../shared/api/client";
 
+/* ── types ─────────────────────────────────────────── */
 interface EmpRow {
-  id: number; employeeNo: string; name: string; companyCode: string;
-  departmentName: string | null; positionTitle: string | null; email: string | null;
-  phone: string | null; hireDate: string | null; status: string;
+  id: number;
+  employeeNo: string;
+  name: string;
+  companyCode: string;
+  departmentCode: string | null;
+  departmentName: string | null;
+  positionTitle: string | null;
+  jobTitle: string | null;
+  email: string | null;
+  phone: string | null;
+  hireDate: string | null;
+  status: string;
 }
 
+type Mode = "list" | "create";
+
 const statusStyle: Record<string, string> = {
-  ACTIVE: "badge-success", ON_LEAVE: "badge-warning", RESIGNED: "badge bg-slate-100 text-slate-500", TERMINATED: "badge-danger",
+  ACTIVE: "badge-success",
+  ON_LEAVE: "badge-warning",
+  RESIGNED: "badge bg-slate-100 text-slate-500",
+  TERMINATED: "badge-danger",
 };
 
+/* ── component ─────────────────────────────────────── */
 export default function EmployeePage() {
   const { t } = useTranslation();
+  const qc = useQueryClient();
+
+  const [mode, setMode] = useState<Mode>("list");
+  const [form, setForm] = useState({
+    employeeNo: "", name: "", companyCode: "", departmentCode: "", departmentName: "",
+    positionTitle: "", jobTitle: "", email: "", phone: "", hireDate: "",
+  });
+
+  /* queries */
   const { data, isLoading } = useQuery({
     queryKey: ["employees"],
     queryFn: async () => (await api.get("/api/v1/hr/employees?size=100")).data,
   });
 
+  /* mutations */
+  const createMut = useMutation({
+    mutationFn: async (body: Record<string, unknown>) => (await api.post("/api/v1/hr/employees", body)).data,
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["employees"] }); setMode("list"); },
+  });
+
+  /* column defs */
   const columnDefs = useMemo<ColDef<EmpRow>[]>(() => [
     { field: "employeeNo", headerName: t("emp.empNo"), flex: 0.8,
       cellRenderer: (p: { value: string }) => <span className="font-mono font-semibold text-brand-700">{p.value}</span> },
@@ -37,13 +69,89 @@ export default function EmployeePage() {
       cellRenderer: (p: { value: string }) => <span className={statusStyle[p.value] || "badge"}>{t("status." + p.value, p.value)}</span> },
   ], [t]);
 
+  /* handlers */
+  const openCreate = () => {
+    setForm({ employeeNo: "", name: "", companyCode: "", departmentCode: "", departmentName: "",
+      positionTitle: "", jobTitle: "", email: "", phone: "", hireDate: "" });
+    setMode("create");
+  };
+
+  const handleSave = () => {
+    createMut.mutate(form);
+  };
+
+  /* ── LIST ─────────────────────────────────────────── */
+  if (mode === "list") {
+    return (
+      <div>
+        <PageHeader title={t("emp.title")} description={t("emp.description")}
+          breadcrumbs={[{ label: t("nav.hr") }, { label: t("emp.title") }]}
+          actions={<button className="btn-primary" onClick={openCreate}><Plus size={16} /> {t("emp.newEmp")}</button>} />
+        <div className="card overflow-hidden">
+          <DataGrid<EmpRow> rowData={data?.data || []} columnDefs={columnDefs} loading={isLoading} />
+        </div>
+      </div>
+    );
+  }
+
+  /* ── CREATE ──────────────────────────────────────── */
   return (
     <div>
-      <PageHeader title={t("emp.title")} description={t("emp.description")}
-        breadcrumbs={[{ label: t("nav.hr") }, { label: t("emp.title") }]}
-        actions={<button className="btn-primary"><Plus size={16} /> {t("emp.newEmp")}</button>} />
-      <div className="card overflow-hidden">
-        <DataGrid<EmpRow> rowData={data?.data || []} columnDefs={columnDefs} loading={isLoading} />
+      <PageHeader title={t("emp.newEmp")}
+        breadcrumbs={[{ label: t("nav.hr") }, { label: t("emp.title") }, { label: t("common.create") }]}
+        actions={<button className="btn-ghost" onClick={() => setMode("list")}><ArrowLeft size={16} /> {t("common.back")}</button>} />
+
+      <div className="card p-6 mb-6">
+        <h3 className="text-base font-semibold text-slate-900 mb-4">{t("common.basicInfo")}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="label">{t("emp.empNo")}</label>
+            <input className="input" value={form.employeeNo} onChange={e => setForm(p => ({ ...p, employeeNo: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">{t("emp.name")}</label>
+            <input className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">{t("emp.companyCode")}</label>
+            <input className="input" value={form.companyCode} onChange={e => setForm(p => ({ ...p, companyCode: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">{t("emp.departmentCode")}</label>
+            <input className="input" value={form.departmentCode} onChange={e => setForm(p => ({ ...p, departmentCode: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">{t("emp.department")}</label>
+            <input className="input" value={form.departmentName} onChange={e => setForm(p => ({ ...p, departmentName: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">{t("emp.position")}</label>
+            <input className="input" value={form.positionTitle} onChange={e => setForm(p => ({ ...p, positionTitle: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">{t("emp.jobTitle")}</label>
+            <input className="input" value={form.jobTitle} onChange={e => setForm(p => ({ ...p, jobTitle: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">{t("emp.email")}</label>
+            <input className="input" type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">{t("emp.phone")}</label>
+            <input className="input" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">{t("emp.hireDate")}</label>
+            <input className="input" type="date" value={form.hireDate} onChange={e => setForm(p => ({ ...p, hireDate: e.target.value }))} />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3">
+        <button className="btn-ghost" onClick={() => setMode("list")}>{t("common.cancel")}</button>
+        <button className="btn-primary" onClick={handleSave} disabled={createMut.isPending}>
+          {createMut.isPending ? t("common.saving") : t("common.save")}
+        </button>
       </div>
     </div>
   );

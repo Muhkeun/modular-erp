@@ -76,7 +76,7 @@ jobs:
               -e SPRING_DATASOURCE_USERNAME="${DB_USER}" \
               -e SPRING_DATASOURCE_PASSWORD="${DB_PASS}" \
               -e MODULAR_ERP_SECURITY_JWT_SECRET="${JWT_SECRET}" \
-              -e JAVA_OPTS="-Xms256m -Xmx512m" \
+              -e JAVA_OPTS="-Xms128m -Xmx384m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m" \
               $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
             # Cleanup old images

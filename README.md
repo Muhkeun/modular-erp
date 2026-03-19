@@ -45,30 +45,41 @@ ModularERP is a modern, cloud-native ERP platform designed for multi-tenant SaaS
 
 ## Architecture
 
-```
-                        +---------------------------+
-                        |       Frontend (SPA)      |
-                        |  React 19 + TypeScript    |
-                        |  AG Grid + Tailwind CSS   |
-                        +------------+--------------+
-                                     | REST API (JSON)
-                        +------------+--------------+
-                        |     Spring Boot 3.4 App   |
-                        |                           |
-  +----------+----------+----------+----------+----------+
-  | Purchase | Sales    |Production| Planning | Account  | ...
-  +----+-----+----+-----+----+-----+----+-----+----+-----+
-       |          |          |          |          |
-  +----+----------+----------+----------+----------+----+
-  |              Platform (Shared Kernel)               |
-  |  core | security | web | i18n | messaging | ai     |
-  |  admin | audit | preference | report               |
-  +--------------------------+--------------------------+
-                             |
-                    +--------+--------+
-                    |   PostgreSQL    |
-                    |  (Multi-tenant) |
-                    +-----------------+
+```mermaid
+graph TD
+    FE["🖥️ Frontend (SPA)<br/>React 19 + TypeScript<br/>AG Grid + Tailwind CSS"]
+    API["⚙️ Spring Boot 3.4 App"]
+    FE -->|"REST API (JSON)"| API
+
+    subgraph Business Modules
+        Purchase
+        Sales
+        Production
+        Planning
+        Account
+        More["..."]
+    end
+
+    API --- Purchase
+    API --- Sales
+    API --- Production
+    API --- Planning
+    API --- Account
+    API --- More
+
+    subgraph Platform ["🔧 Platform (Shared Kernel)"]
+        P1["core | security | web | i18n | messaging | ai"]
+        P2["admin | audit | preference | report"]
+    end
+
+    Purchase --> Platform
+    Sales --> Platform
+    Production --> Platform
+    Planning --> Platform
+    Account --> Platform
+
+    DB["🐘 PostgreSQL<br/>(Multi-tenant)"]
+    Platform --> DB
 ```
 
 **Module Dependency Rules**
@@ -129,39 +140,41 @@ ModularERP is a modern, cloud-native ERP platform designed for multi-tenant SaaS
 
 ### Procure-to-Pay (P2P)
 
-```
-Purchase Request --> Approval --> Purchase Order --> Goods Receipt --> Stock Update --> Journal Entry
-       |                              |                   |
-       +-- Budget Availability Check  +-- Vendor Portal   +-- Quality Inspection
+```mermaid
+graph LR
+    PR["Purchase Request"] --> Approval --> PO["Purchase Order"] --> GR["Goods Receipt"] --> Stock["Stock Update"] --> JE["Journal Entry"]
+    PR -.- Budget["Budget Availability Check"]
+    PO -.- Vendor["Vendor Portal"]
+    GR -.- QI["Quality Inspection"]
 ```
 
 ### Order-to-Cash (O2C)
 
-```
-CRM Lead --> Opportunity --> Sales Order --> Goods Issue --> Stock Decrease --> Invoice --> Journal Entry
-                                                                                |
-                                                                   Currency Conversion (multi-currency)
+```mermaid
+graph LR
+    Lead["CRM Lead"] --> Opportunity --> SO["Sales Order"] --> GI["Goods Issue"] --> Stock["Stock Decrease"] --> Invoice --> JE["Journal Entry"]
+    Invoice -.- FX["Currency Conversion<br/>(multi-currency)"]
 ```
 
 ### Manufacturing
 
-```
-Sales Order --> MRP Run --+--> Purchase (buy items) --> GR --> Stock
-                          |
-                          +--> Work Order (make items)
-                                    |
-                                    +--> Material Issue (GI)
-                                    +--> Shop Floor Operations (per routing step)
-                                    +--> Production Report (good qty + scrap)
-                                    +--> Finished Goods Receipt --> Stock --> Sales Delivery
+```mermaid
+graph LR
+    SO["Sales Order"] --> MRP["MRP Run"]
+    MRP --> Buy["Purchase (buy items)"] --> GR["Goods Receipt"] --> Stock1["Stock"]
+    MRP --> WO["Work Order (make items)"]
+    WO --> MI["Material Issue (GI)"]
+    WO --> SF["Shop Floor Operations<br/>(per routing step)"]
+    WO --> PR["Production Report<br/>(good qty + scrap)"]
+    WO --> FG["Finished Goods Receipt"] --> Stock2["Stock"] --> SD["Sales Delivery"]
 ```
 
 ### Financial Close
 
-```
-Journal Entries --> Depreciation Run --> Cost Allocation --> Exchange Rate Revaluation
-       |                                                           |
-       +--> Close Checklist --> Soft Close --> Hard Close --> Financial Reports
+```mermaid
+graph LR
+    JE["Journal Entries"] --> Dep["Depreciation Run"] --> Cost["Cost Allocation"] --> FX["Exchange Rate Revaluation"]
+    JE --> CL["Close Checklist"] --> SC["Soft Close"] --> HC["Hard Close"] --> FR["Financial Reports"]
 ```
 
 ---
@@ -260,11 +273,7 @@ This starts PostgreSQL 16 and the full application with Flyway migrations.
 
 ModularERP has comprehensive test coverage across all layers.
 
-```
-191 backend tests | 15 frontend unit tests | 46 E2E scenarios
-────────────────────────────────────────────────────────────
-All passing | 0 failures
-```
+> **191 backend tests** | **15 frontend unit tests** | **46 E2E scenarios** — All passing, 0 failures
 
 ### Backend Tests
 
@@ -377,8 +386,9 @@ modular-erp/
 
 ModularERP deploys automatically via GitHub Actions on push to `main`.
 
-```
-Push to main --> GitHub Actions --> Docker Build --> AWS ECR --> EC2 Deploy
+```mermaid
+graph LR
+    Push["Push to main"] --> GA["GitHub Actions"] --> Docker["Docker Build"] --> ECR["AWS ECR"] --> EC2["EC2 Deploy"]
 ```
 
 | Component | Service |

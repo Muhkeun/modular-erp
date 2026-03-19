@@ -3,7 +3,7 @@
 -- =============================================
 
 -- ── CRM: Customers ──
-CREATE TABLE crm_customers (
+CREATE TABLE IF NOT EXISTS crm_customers (
     id              BIGSERIAL PRIMARY KEY,
     tenant_id       VARCHAR(50) NOT NULL,
     customer_code   VARCHAR(30) NOT NULL,
@@ -28,10 +28,10 @@ CREATE TABLE crm_customers (
     created_by      VARCHAR(100),
     updated_by      VARCHAR(100)
 );
-CREATE UNIQUE INDEX uk_crm_customer_code ON crm_customers(tenant_id, customer_code);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_crm_customer_code ON crm_customers(tenant_id, customer_code);
 
 -- ── CRM: Leads ──
-CREATE TABLE crm_leads (
+CREATE TABLE IF NOT EXISTS crm_leads (
     id                    BIGSERIAL PRIMARY KEY,
     tenant_id             VARCHAR(50) NOT NULL,
     lead_no               VARCHAR(30) NOT NULL,
@@ -52,10 +52,10 @@ CREATE TABLE crm_leads (
     created_by            VARCHAR(100),
     updated_by            VARCHAR(100)
 );
-CREATE UNIQUE INDEX uk_crm_lead_no ON crm_leads(tenant_id, lead_no);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_crm_lead_no ON crm_leads(tenant_id, lead_no);
 
 -- ── CRM: Opportunities ──
-CREATE TABLE crm_opportunities (
+CREATE TABLE IF NOT EXISTS crm_opportunities (
     id                  BIGSERIAL PRIMARY KEY,
     tenant_id           VARCHAR(50) NOT NULL,
     opportunity_no      VARCHAR(30) NOT NULL,
@@ -76,10 +76,10 @@ CREATE TABLE crm_opportunities (
     created_by          VARCHAR(100),
     updated_by          VARCHAR(100)
 );
-CREATE UNIQUE INDEX uk_crm_opportunity_no ON crm_opportunities(tenant_id, opportunity_no);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_crm_opportunity_no ON crm_opportunities(tenant_id, opportunity_no);
 
 -- ── CRM: Activities ──
-CREATE TABLE crm_activities (
+CREATE TABLE IF NOT EXISTS crm_activities (
     id              BIGSERIAL PRIMARY KEY,
     tenant_id       VARCHAR(50) NOT NULL,
     activity_type   VARCHAR(20) NOT NULL DEFAULT 'NOTE',
@@ -100,7 +100,7 @@ CREATE TABLE crm_activities (
 );
 
 -- ── Costing: Cost Centers ──
-CREATE TABLE cost_centers (
+CREATE TABLE IF NOT EXISTS cost_centers (
     id                BIGSERIAL PRIMARY KEY,
     tenant_id         VARCHAR(50) NOT NULL,
     cost_center_code  VARCHAR(30) NOT NULL,
@@ -115,10 +115,10 @@ CREATE TABLE cost_centers (
     created_by        VARCHAR(100),
     updated_by        VARCHAR(100)
 );
-CREATE UNIQUE INDEX uk_cost_center_code ON cost_centers(tenant_id, cost_center_code);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_cost_center_code ON cost_centers(tenant_id, cost_center_code);
 
 -- ── Costing: Standard Costs ──
-CREATE TABLE standard_costs (
+CREATE TABLE IF NOT EXISTS standard_costs (
     id              BIGSERIAL PRIMARY KEY,
     tenant_id       VARCHAR(50) NOT NULL,
     item_code       VARCHAR(50) NOT NULL,
@@ -136,7 +136,7 @@ CREATE TABLE standard_costs (
 );
 
 -- ── Costing: Cost Allocations ──
-CREATE TABLE cost_allocations (
+CREATE TABLE IF NOT EXISTS cost_allocations (
     id                BIGSERIAL PRIMARY KEY,
     tenant_id         VARCHAR(50) NOT NULL,
     document_no       VARCHAR(30) NOT NULL,
@@ -157,10 +157,10 @@ CREATE TABLE cost_allocations (
     created_by        VARCHAR(100),
     updated_by        VARCHAR(100)
 );
-CREATE UNIQUE INDEX uk_cost_allocation_no ON cost_allocations(tenant_id, document_no);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_cost_allocation_no ON cost_allocations(tenant_id, document_no);
 
 -- ── Costing: Product Costs ──
-CREATE TABLE product_costs (
+CREATE TABLE IF NOT EXISTS product_costs (
     id              BIGSERIAL PRIMARY KEY,
     tenant_id       VARCHAR(50) NOT NULL,
     item_code       VARCHAR(50) NOT NULL,
@@ -183,7 +183,7 @@ CREATE TABLE product_costs (
 );
 
 -- ── Currency: Currencies ──
-CREATE TABLE currencies (
+CREATE TABLE IF NOT EXISTS currencies (
     id               BIGSERIAL PRIMARY KEY,
     tenant_id        VARCHAR(50) NOT NULL,
     currency_code    VARCHAR(3) NOT NULL,
@@ -198,10 +198,10 @@ CREATE TABLE currencies (
     created_by       VARCHAR(100),
     updated_by       VARCHAR(100)
 );
-CREATE UNIQUE INDEX uk_currency_code ON currencies(tenant_id, currency_code);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_currency_code ON currencies(tenant_id, currency_code);
 
 -- ── Currency: Exchange Rates ──
-CREATE TABLE exchange_rates (
+CREATE TABLE IF NOT EXISTS exchange_rates (
     id              BIGSERIAL PRIMARY KEY,
     tenant_id       VARCHAR(50) NOT NULL,
     from_currency   VARCHAR(3) NOT NULL,
@@ -218,7 +218,7 @@ CREATE TABLE exchange_rates (
 );
 
 -- ── Currency: Revaluations ──
-CREATE TABLE currency_revaluations (
+CREATE TABLE IF NOT EXISTS currency_revaluations (
     id                    BIGSERIAL PRIMARY KEY,
     tenant_id             VARCHAR(50) NOT NULL,
     document_no           VARCHAR(30) NOT NULL,
@@ -239,4 +239,4 @@ CREATE TABLE currency_revaluations (
     created_by            VARCHAR(100),
     updated_by            VARCHAR(100)
 );
-CREATE UNIQUE INDEX uk_reval_no ON currency_revaluations(tenant_id, document_no);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_reval_no ON currency_revaluations(tenant_id, document_no);

@@ -2,7 +2,7 @@
 -- Batch Processing Tables
 -- =============================================
 
-CREATE TABLE batch_jobs (
+CREATE TABLE IF NOT EXISTS batch_jobs (
     id              BIGSERIAL PRIMARY KEY,
     tenant_id       VARCHAR(50)  NOT NULL,
     job_code        VARCHAR(50)  NOT NULL,
@@ -20,9 +20,9 @@ CREATE TABLE batch_jobs (
     updated_by      VARCHAR(100)
 );
 
-CREATE UNIQUE INDEX uk_batch_jobs_tenant_code ON batch_jobs (tenant_id, job_code);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_batch_jobs_tenant_code ON batch_jobs (tenant_id, job_code);
 
-CREATE TABLE batch_executions (
+CREATE TABLE IF NOT EXISTS batch_executions (
     id                BIGSERIAL PRIMARY KEY,
     tenant_id         VARCHAR(50)  NOT NULL,
     batch_job_id      BIGINT       NOT NULL REFERENCES batch_jobs (id),
@@ -45,14 +45,14 @@ CREATE TABLE batch_executions (
     updated_by        VARCHAR(100)
 );
 
-CREATE INDEX idx_batch_executions_job ON batch_executions (batch_job_id);
-CREATE INDEX idx_batch_executions_tenant ON batch_executions (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_batch_executions_job ON batch_executions (batch_job_id);
+CREATE INDEX IF NOT EXISTS idx_batch_executions_tenant ON batch_executions (tenant_id);
 
 -- =============================================
 -- Notification Tables
 -- =============================================
 
-CREATE TABLE notification_templates (
+CREATE TABLE IF NOT EXISTS notification_templates (
     id            BIGSERIAL PRIMARY KEY,
     tenant_id     VARCHAR(50)  NOT NULL,
     template_code VARCHAR(50)  NOT NULL,
@@ -70,9 +70,9 @@ CREATE TABLE notification_templates (
     updated_by    VARCHAR(100)
 );
 
-CREATE UNIQUE INDEX uk_notification_templates_tenant_code ON notification_templates (tenant_id, template_code);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_notification_templates_tenant_code ON notification_templates (tenant_id, template_code);
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id              BIGSERIAL PRIMARY KEY,
     tenant_id       VARCHAR(50)  NOT NULL,
     template_code   VARCHAR(50),
@@ -95,10 +95,10 @@ CREATE TABLE notifications (
     updated_by      VARCHAR(100)
 );
 
-CREATE INDEX idx_notifications_recipient ON notifications (tenant_id, recipient_id, status);
-CREATE INDEX idx_notifications_reference ON notifications (reference_type, reference_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications (tenant_id, recipient_id, status);
+CREATE INDEX IF NOT EXISTS idx_notifications_reference ON notifications (reference_type, reference_id);
 
-CREATE TABLE notification_preferences (
+CREATE TABLE IF NOT EXISTS notification_preferences (
     id             BIGSERIAL PRIMARY KEY,
     tenant_id      VARCHAR(50)  NOT NULL,
     user_id        VARCHAR(100) NOT NULL,
@@ -114,4 +114,4 @@ CREATE TABLE notification_preferences (
     updated_by     VARCHAR(100)
 );
 
-CREATE UNIQUE INDEX uk_notification_prefs_user_event ON notification_preferences (tenant_id, user_id, event_type);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_notification_prefs_user_event ON notification_preferences (tenant_id, user_id, event_type);

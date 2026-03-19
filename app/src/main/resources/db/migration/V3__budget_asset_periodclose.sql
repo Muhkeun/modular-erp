@@ -3,7 +3,7 @@
 -- =============================================
 
 -- Budget Period
-CREATE TABLE budget_periods (
+CREATE TABLE IF NOT EXISTS budget_periods (
     id              BIGSERIAL PRIMARY KEY,
     tenant_id       VARCHAR(50)  NOT NULL,
     fiscal_year     INT          NOT NULL,
@@ -18,10 +18,10 @@ CREATE TABLE budget_periods (
     created_by      VARCHAR(100),
     updated_by      VARCHAR(100)
 );
-CREATE INDEX idx_budget_periods_tenant ON budget_periods(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_budget_periods_tenant ON budget_periods(tenant_id);
 
 -- Budget Item
-CREATE TABLE budget_items (
+CREATE TABLE IF NOT EXISTS budget_items (
     id                BIGSERIAL PRIMARY KEY,
     tenant_id         VARCHAR(50)    NOT NULL,
     budget_period_id  BIGINT         NOT NULL REFERENCES budget_periods(id),
@@ -40,11 +40,11 @@ CREATE TABLE budget_items (
     created_by        VARCHAR(100),
     updated_by        VARCHAR(100)
 );
-CREATE INDEX idx_budget_items_tenant ON budget_items(tenant_id);
-CREATE INDEX idx_budget_items_period ON budget_items(budget_period_id);
+CREATE INDEX IF NOT EXISTS idx_budget_items_tenant ON budget_items(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_budget_items_period ON budget_items(budget_period_id);
 
 -- Budget Transfer
-CREATE TABLE budget_transfers (
+CREATE TABLE IF NOT EXISTS budget_transfers (
     id                   BIGSERIAL PRIMARY KEY,
     tenant_id            VARCHAR(50)    NOT NULL,
     document_no          VARCHAR(30)    NOT NULL,
@@ -62,10 +62,10 @@ CREATE TABLE budget_transfers (
     created_by           VARCHAR(100),
     updated_by           VARCHAR(100)
 );
-CREATE INDEX idx_budget_transfers_tenant ON budget_transfers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_budget_transfers_tenant ON budget_transfers(tenant_id);
 
 -- Asset
-CREATE TABLE assets (
+CREATE TABLE IF NOT EXISTS assets (
     id                       BIGSERIAL PRIMARY KEY,
     tenant_id                VARCHAR(50)    NOT NULL,
     asset_no                 VARCHAR(30)    NOT NULL,
@@ -90,11 +90,11 @@ CREATE TABLE assets (
     created_by               VARCHAR(100),
     updated_by               VARCHAR(100)
 );
-CREATE INDEX idx_assets_tenant ON assets(tenant_id);
-CREATE UNIQUE INDEX idx_assets_tenant_no ON assets(tenant_id, asset_no);
+CREATE INDEX IF NOT EXISTS idx_assets_tenant ON assets(tenant_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_assets_tenant_no ON assets(tenant_id, asset_no);
 
 -- Depreciation Schedule
-CREATE TABLE depreciation_schedules (
+CREATE TABLE IF NOT EXISTS depreciation_schedules (
     id                  BIGSERIAL PRIMARY KEY,
     tenant_id           VARCHAR(50)    NOT NULL,
     asset_id            BIGINT         NOT NULL REFERENCES assets(id),
@@ -111,11 +111,11 @@ CREATE TABLE depreciation_schedules (
     created_by          VARCHAR(100),
     updated_by          VARCHAR(100)
 );
-CREATE INDEX idx_depreciation_schedules_tenant ON depreciation_schedules(tenant_id);
-CREATE INDEX idx_depreciation_schedules_asset ON depreciation_schedules(asset_id);
+CREATE INDEX IF NOT EXISTS idx_depreciation_schedules_tenant ON depreciation_schedules(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_depreciation_schedules_asset ON depreciation_schedules(asset_id);
 
 -- Asset Disposal
-CREATE TABLE asset_disposals (
+CREATE TABLE IF NOT EXISTS asset_disposals (
     id                    BIGSERIAL PRIMARY KEY,
     tenant_id             VARCHAR(50)    NOT NULL,
     asset_id              BIGINT         NOT NULL REFERENCES assets(id),
@@ -132,10 +132,10 @@ CREATE TABLE asset_disposals (
     created_by            VARCHAR(100),
     updated_by            VARCHAR(100)
 );
-CREATE INDEX idx_asset_disposals_tenant ON asset_disposals(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_asset_disposals_tenant ON asset_disposals(tenant_id);
 
 -- Fiscal Period
-CREATE TABLE fiscal_periods (
+CREATE TABLE IF NOT EXISTS fiscal_periods (
     id          BIGSERIAL PRIMARY KEY,
     tenant_id   VARCHAR(50)  NOT NULL,
     fiscal_year INT          NOT NULL,
@@ -152,11 +152,11 @@ CREATE TABLE fiscal_periods (
     created_by  VARCHAR(100),
     updated_by  VARCHAR(100)
 );
-CREATE INDEX idx_fiscal_periods_tenant ON fiscal_periods(tenant_id);
-CREATE UNIQUE INDEX idx_fiscal_periods_tenant_year_period ON fiscal_periods(tenant_id, fiscal_year, period);
+CREATE INDEX IF NOT EXISTS idx_fiscal_periods_tenant ON fiscal_periods(tenant_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fiscal_periods_tenant_year_period ON fiscal_periods(tenant_id, fiscal_year, period);
 
 -- Period Close Task
-CREATE TABLE period_close_tasks (
+CREATE TABLE IF NOT EXISTS period_close_tasks (
     id               BIGSERIAL PRIMARY KEY,
     tenant_id        VARCHAR(50)   NOT NULL,
     fiscal_period_id BIGINT        NOT NULL REFERENCES fiscal_periods(id),
@@ -174,11 +174,11 @@ CREATE TABLE period_close_tasks (
     created_by       VARCHAR(100),
     updated_by       VARCHAR(100)
 );
-CREATE INDEX idx_period_close_tasks_tenant ON period_close_tasks(tenant_id);
-CREATE INDEX idx_period_close_tasks_period ON period_close_tasks(fiscal_period_id);
+CREATE INDEX IF NOT EXISTS idx_period_close_tasks_tenant ON period_close_tasks(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_period_close_tasks_period ON period_close_tasks(fiscal_period_id);
 
 -- Closing Entry
-CREATE TABLE closing_entries (
+CREATE TABLE IF NOT EXISTS closing_entries (
     id               BIGSERIAL PRIMARY KEY,
     tenant_id        VARCHAR(50)    NOT NULL,
     fiscal_period_id BIGINT         NOT NULL REFERENCES fiscal_periods(id),
@@ -196,5 +196,5 @@ CREATE TABLE closing_entries (
     created_by       VARCHAR(100),
     updated_by       VARCHAR(100)
 );
-CREATE INDEX idx_closing_entries_tenant ON closing_entries(tenant_id);
-CREATE INDEX idx_closing_entries_period ON closing_entries(fiscal_period_id);
+CREATE INDEX IF NOT EXISTS idx_closing_entries_tenant ON closing_entries(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_closing_entries_period ON closing_entries(fiscal_period_id);

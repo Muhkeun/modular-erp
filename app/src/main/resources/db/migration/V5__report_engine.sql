@@ -1,6 +1,6 @@
 -- Report Template & Execution tables for the Report/Export engine
 
-CREATE TABLE report_templates (
+CREATE TABLE IF NOT EXISTS report_templates (
     id              BIGSERIAL PRIMARY KEY,
     tenant_id       VARCHAR(50)  NOT NULL,
     template_code   VARCHAR(50)  NOT NULL,
@@ -20,10 +20,10 @@ CREATE TABLE report_templates (
     UNIQUE (tenant_id, template_code)
 );
 
-CREATE INDEX idx_report_templates_tenant ON report_templates(tenant_id);
-CREATE INDEX idx_report_templates_module ON report_templates(module_code);
+CREATE INDEX IF NOT EXISTS idx_report_templates_tenant ON report_templates(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_report_templates_module ON report_templates(module_code);
 
-CREATE TABLE report_executions (
+CREATE TABLE IF NOT EXISTS report_executions (
     id              BIGSERIAL PRIMARY KEY,
     tenant_id       VARCHAR(50)  NOT NULL,
     template_id     BIGINT       REFERENCES report_templates(id),
@@ -44,6 +44,6 @@ CREATE TABLE report_executions (
     updated_by      VARCHAR(100)
 );
 
-CREATE INDEX idx_report_executions_tenant ON report_executions(tenant_id);
-CREATE INDEX idx_report_executions_requested_by ON report_executions(requested_by);
-CREATE INDEX idx_report_executions_status ON report_executions(status);
+CREATE INDEX IF NOT EXISTS idx_report_executions_tenant ON report_executions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_report_executions_requested_by ON report_executions(requested_by);
+CREATE INDEX IF NOT EXISTS idx_report_executions_status ON report_executions(status);

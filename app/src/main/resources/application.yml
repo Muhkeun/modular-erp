@@ -85,11 +85,13 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
   flyway:
     enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
     baseline-on-migrate: true

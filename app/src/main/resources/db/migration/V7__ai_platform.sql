@@ -1,6 +1,6 @@
 -- AI Platform tables
 
-CREATE TABLE ai_conversations (
+CREATE TABLE IF NOT EXISTS ai_conversations (
     id              BIGSERIAL PRIMARY KEY,
     session_id      VARCHAR(64)  NOT NULL UNIQUE,
     user_id         VARCHAR(100) NOT NULL,
@@ -16,11 +16,11 @@ CREATE TABLE ai_conversations (
     updated_by      VARCHAR(100)
 );
 
-CREATE INDEX idx_ai_conv_user    ON ai_conversations (user_id);
-CREATE INDEX idx_ai_conv_tenant  ON ai_conversations (tenant_id);
-CREATE INDEX idx_ai_conv_session ON ai_conversations (session_id);
+CREATE INDEX IF NOT EXISTS idx_ai_conv_user    ON ai_conversations (user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_conv_tenant  ON ai_conversations (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_ai_conv_session ON ai_conversations (session_id);
 
-CREATE TABLE ai_messages (
+CREATE TABLE IF NOT EXISTS ai_messages (
     id              BIGSERIAL PRIMARY KEY,
     conversation_id BIGINT       NOT NULL REFERENCES ai_conversations(id),
     role            VARCHAR(20)  NOT NULL,
@@ -36,9 +36,9 @@ CREATE TABLE ai_messages (
     updated_by      VARCHAR(100)
 );
 
-CREATE INDEX idx_ai_msg_conv ON ai_messages (conversation_id);
+CREATE INDEX IF NOT EXISTS idx_ai_msg_conv ON ai_messages (conversation_id);
 
-CREATE TABLE embedding_documents (
+CREATE TABLE IF NOT EXISTS embedding_documents (
     id               BIGSERIAL PRIMARY KEY,
     source_type      VARCHAR(50)  NOT NULL,
     source_id        VARCHAR(100) NOT NULL,
@@ -55,6 +55,6 @@ CREATE TABLE embedding_documents (
     updated_by       VARCHAR(100)
 );
 
-CREATE INDEX idx_embedding_source ON embedding_documents (source_type, source_id);
-CREATE INDEX idx_embedding_tenant ON embedding_documents (tenant_id);
-CREATE INDEX idx_embedding_content ON embedding_documents USING gin (to_tsvector('simple', content));
+CREATE INDEX IF NOT EXISTS idx_embedding_source ON embedding_documents (source_type, source_id);
+CREATE INDEX IF NOT EXISTS idx_embedding_tenant ON embedding_documents (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_embedding_content ON embedding_documents USING gin (to_tsvector('simple', content));

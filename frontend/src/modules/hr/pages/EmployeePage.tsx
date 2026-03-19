@@ -101,53 +101,60 @@ export default function EmployeePage() {
         breadcrumbs={[{ label: t("nav.hr") }, { label: t("emp.title") }, { label: t("common.create") }]}
         actions={<button className="btn-ghost" onClick={() => setMode("list")}><ArrowLeft size={16} /> {t("common.back")}</button>} />
 
-      <div className="card p-6 mb-6">
-        <h3 className="text-base font-semibold text-slate-900 mb-4">{t("common.basicInfo")}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* workspace hero */}
+      <div className="workspace-hero">
+        <p className="section-kicker">HR Workspace</p>
+        <h3 className="section-title">{t("emp.newEmp")}</h3>
+      </div>
+
+      <div className="section-card">
+        <p className="section-kicker">Employee Info</p>
+        <h3 className="section-title">{t("common.basicInfo")}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
           <div>
-            <label className="label">{t("emp.empNo")}</label>
+            <label className="field-label">{t("emp.empNo")}</label>
             <input className="input" value={form.employeeNo} onChange={e => setForm(p => ({ ...p, employeeNo: e.target.value }))} />
           </div>
           <div>
-            <label className="label">{t("emp.name")}</label>
+            <label className="field-label">{t("emp.name")}</label>
             <input className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
           </div>
           <div>
-            <label className="label">{t("emp.companyCode")}</label>
+            <label className="field-label">{t("emp.companyCode")}</label>
             <input className="input" value={form.companyCode} onChange={e => setForm(p => ({ ...p, companyCode: e.target.value }))} />
           </div>
           <div>
-            <label className="label">{t("emp.departmentCode")}</label>
+            <label className="field-label">{t("emp.departmentCode")}</label>
             <input className="input" value={form.departmentCode} onChange={e => setForm(p => ({ ...p, departmentCode: e.target.value }))} />
           </div>
           <div>
-            <label className="label">{t("emp.department")}</label>
+            <label className="field-label">{t("emp.department")}</label>
             <input className="input" value={form.departmentName} onChange={e => setForm(p => ({ ...p, departmentName: e.target.value }))} />
           </div>
           <div>
-            <label className="label">{t("emp.position")}</label>
+            <label className="field-label">{t("emp.position")}</label>
             <input className="input" value={form.positionTitle} onChange={e => setForm(p => ({ ...p, positionTitle: e.target.value }))} />
           </div>
           <div>
-            <label className="label">{t("emp.jobTitle")}</label>
+            <label className="field-label">{t("emp.jobTitle")}</label>
             <input className="input" value={form.jobTitle} onChange={e => setForm(p => ({ ...p, jobTitle: e.target.value }))} />
           </div>
           <div>
-            <label className="label">{t("emp.email")}</label>
+            <label className="field-label">{t("emp.email")}</label>
             <input className="input" type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
           </div>
           <div>
-            <label className="label">{t("emp.phone")}</label>
+            <label className="field-label">{t("emp.phone")}</label>
             <input className="input" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
           </div>
           <div>
-            <label className="label">{t("emp.hireDate")}</label>
+            <label className="field-label">{t("emp.hireDate")}</label>
             <input className="input" type="date" value={form.hireDate} onChange={e => setForm(p => ({ ...p, hireDate: e.target.value }))} />
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end gap-3">
+      <div className="flex justify-end gap-3 mt-6">
         <button className="btn-ghost" onClick={() => setMode("list")}>{t("common.cancel")}</button>
         <button className="btn-primary" onClick={handleSave} disabled={createMut.isPending}>
           {createMut.isPending ? t("common.saving") : t("common.save")}

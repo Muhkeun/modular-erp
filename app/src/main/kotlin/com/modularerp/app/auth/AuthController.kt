@@ -23,7 +23,9 @@ data class LoginResponse(
     val name: String,
     val tenantId: String,
     val roles: List<String>,
-    val locale: String
+    val locale: String,
+    val ssoEnabled: Boolean = false,
+    val ssoProviders: List<String> = emptyList()
 )
 
 data class RegisterRequest(

@@ -136,57 +136,60 @@ export default function WorkOrderDetailPage() {
         }
       />
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-        <div className="card p-5">
-          <p className="text-xs font-medium text-slate-500 uppercase">{t("wo.product")}</p>
-          <p className="mt-1 text-lg font-bold text-slate-900">{wo.productName}</p>
-          <p className="text-sm text-slate-500 font-mono">{wo.productCode}</p>
-        </div>
-        <div className="card p-5">
-          <p className="text-xs font-medium text-slate-500 uppercase">{t("wo.progress")}</p>
-          <p className="mt-1 text-lg font-bold text-slate-900">
-            {wo.completedQuantity} / {wo.plannedQuantity} {wo.unitOfMeasure}
-          </p>
-          <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-brand-500 transition-all"
-              style={{ width: `${progressPct}%` }}
-            />
+      {/* Summary */}
+      <div className="workspace-hero mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <div className="stat-tile">
+            <span className="field-label">{t("wo.product")}</span>
+            <p className="text-lg font-bold text-slate-900">{wo.productName}</p>
+            <p className="text-sm text-slate-500 font-mono">{wo.productCode}</p>
           </div>
-        </div>
-        <div className="card p-5">
-          <p className="text-xs font-medium text-slate-500 uppercase">{t("wo.yield")}</p>
-          <p className={`mt-1 text-lg font-bold ${wo.yieldRate >= 0.95 ? "text-emerald-600" : "text-red-600"}`}>
-            {(wo.yieldRate * 100).toFixed(1)}%
-          </p>
-          <p className="text-sm text-slate-500">
-            {t("wo.scrap")}: {wo.scrapQuantity}
-          </p>
-        </div>
-        <div className="card p-5">
-          <p className="text-xs font-medium text-slate-500 uppercase">{t("common.status")}</p>
-          <span
-            className={`mt-2 inline-block rounded-lg px-3 py-1.5 text-sm font-semibold ${statusColors[wo.status] || ""}`}
-          >
-            {String(t("status." + wo.status, wo.status))}
-          </span>
-          <p className="mt-1 text-xs text-slate-400">
-            {t("wo.priority")}: {wo.priority}
-          </p>
+          <div className="stat-tile">
+            <span className="field-label">{t("wo.progress")}</span>
+            <p className="text-lg font-bold text-slate-900">
+              {wo.completedQuantity} / {wo.plannedQuantity} {wo.unitOfMeasure}
+            </p>
+            <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-brand-500 transition-all"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          </div>
+          <div className="stat-tile">
+            <span className="field-label">{t("wo.yield")}</span>
+            <p className={`text-lg font-bold ${wo.yieldRate >= 0.95 ? "text-emerald-600" : "text-red-600"}`}>
+              {(wo.yieldRate * 100).toFixed(1)}%
+            </p>
+            <p className="text-sm text-slate-500">
+              {t("wo.scrap")}: {wo.scrapQuantity}
+            </p>
+          </div>
+          <div className="stat-tile">
+            <span className="field-label">{t("common.status")}</span>
+            <span
+              className={`mt-1 inline-block rounded-lg px-3 py-1.5 text-sm font-semibold ${statusColors[wo.status] || ""}`}
+            >
+              {String(t("status." + wo.status, wo.status))}
+            </span>
+            <p className="mt-1 text-xs text-slate-400">
+              {t("wo.priority")}: {wo.priority}
+            </p>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Operations */}
-        <div className="card">
-          <div className="border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+        <div className="section-card">
+          <p className="section-kicker">{t("wo.title")}</p>
+          <h3 className="section-title flex items-center gap-2">
             <Clock size={18} className="text-slate-400" />
-            <h3 className="text-base font-semibold text-slate-900">{t("wo.operations")}</h3>
-          </div>
-          <div className="divide-y divide-slate-50">
+            {t("wo.operations")}
+          </h3>
+          <div className="divide-y divide-slate-50 mt-4">
             {(!wo.operations || wo.operations.length === 0) ? (
-              <p className="px-6 py-8 text-sm text-slate-400 text-center">{t("common.noData")}</p>
+              <p className="py-8 text-sm text-slate-400 text-center">{t("common.noData")}</p>
             ) : (
               wo.operations.map((op: any) => {
                 const opProgress =
@@ -194,7 +197,7 @@ export default function WorkOrderDetailPage() {
                     ? Math.min(100, (op.completedQuantity / wo.plannedQuantity) * 100)
                     : 0;
                 return (
-                  <div key={op.operationNo} className="px-6 py-4">
+                  <div key={op.operationNo} className="py-4">
                     <div className="flex items-center gap-4">
                       <div
                         className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold ${statusColors[op.status] || "bg-slate-50"}`}
@@ -235,14 +238,15 @@ export default function WorkOrderDetailPage() {
         </div>
 
         {/* Materials */}
-        <div className="card">
-          <div className="border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+        <div className="section-card">
+          <p className="section-kicker">{t("wo.title")}</p>
+          <h3 className="section-title flex items-center gap-2">
             <Package size={18} className="text-slate-400" />
-            <h3 className="text-base font-semibold text-slate-900">{t("wo.materials")}</h3>
-          </div>
-          <div className="divide-y divide-slate-50">
+            {t("wo.materials")}
+          </h3>
+          <div className="divide-y divide-slate-50 mt-4">
             {(!wo.materials || wo.materials.length === 0) ? (
-              <p className="px-6 py-8 text-sm text-slate-400 text-center">{t("common.noData")}</p>
+              <p className="py-8 text-sm text-slate-400 text-center">{t("common.noData")}</p>
             ) : (
               wo.materials.map((mat: any) => {
                 const matProgress =
@@ -250,7 +254,7 @@ export default function WorkOrderDetailPage() {
                     ? Math.min(100, (mat.issuedQuantity / mat.requiredQuantity) * 100)
                     : 0;
                 return (
-                  <div key={mat.itemCode} className="px-6 py-4">
+                  <div key={mat.itemCode} className="py-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-slate-900">{mat.itemName}</p>
@@ -297,17 +301,20 @@ export default function WorkOrderDetailPage() {
 
       {/* Report Output Dialog */}
       {showReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h2 className="text-lg font-bold text-slate-900">{t("wo.reportOutput")}</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm">
+          <div className="rounded-[28px] border border-white/70 bg-white/95 p-6 shadow-[0_32px_80px_rgba(15,23,42,0.28)] w-full max-w-md">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <p className="section-kicker">{t("wo.title")}</p>
+                <h3 className="section-title">{t("wo.reportOutput")}</h3>
+              </div>
               <button className="text-slate-400 hover:text-slate-600" onClick={() => setShowReport(false)}>
                 <X size={20} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.operationNo")}</label>
+                <label className="field-label">{t("wo.operationNo")}</label>
                 <input
                   className="input w-full"
                   type="number"
@@ -316,7 +323,7 @@ export default function WorkOrderDetailPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.goodQty")}</label>
+                <label className="field-label">{t("wo.goodQty")}</label>
                 <input
                   className="input w-full"
                   type="number"
@@ -325,7 +332,7 @@ export default function WorkOrderDetailPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.scrapQty")}</label>
+                <label className="field-label">{t("wo.scrapQty")}</label>
                 <input
                   className="input w-full"
                   type="number"
@@ -334,7 +341,7 @@ export default function WorkOrderDetailPage() {
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
+            <div className="flex justify-end gap-3 mt-6 pt-5 border-t border-slate-100">
               <button className="btn-secondary" onClick={() => setShowReport(false)}>
                 {t("common.cancel")}
               </button>
@@ -352,21 +359,24 @@ export default function WorkOrderDetailPage() {
 
       {/* Issue Material Dialog */}
       {issueForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h2 className="text-lg font-bold text-slate-900">{t("wo.issueMaterial")}</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm">
+          <div className="rounded-[28px] border border-white/70 bg-white/95 p-6 shadow-[0_32px_80px_rgba(15,23,42,0.28)] w-full max-w-sm">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <p className="section-kicker">{t("wo.materials")}</p>
+                <h3 className="section-title">{t("wo.issueMaterial")}</h3>
+              </div>
               <button className="text-slate-400 hover:text-slate-600" onClick={() => setIssueForm(null)}>
                 <X size={20} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t("item.code")}</label>
+                <label className="field-label">{t("item.code")}</label>
                 <input className="input w-full bg-slate-50" value={issueForm.itemCode} readOnly />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.plannedQty")}</label>
+                <label className="field-label">{t("wo.plannedQty")}</label>
                 <input
                   className="input w-full"
                   type="number"
@@ -375,7 +385,7 @@ export default function WorkOrderDetailPage() {
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
+            <div className="flex justify-end gap-3 mt-6 pt-5 border-t border-slate-100">
               <button className="btn-secondary" onClick={() => setIssueForm(null)}>
                 {t("common.cancel")}
               </button>

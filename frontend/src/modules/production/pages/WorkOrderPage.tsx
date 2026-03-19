@@ -6,7 +6,6 @@ import type { ColDef } from "ag-grid-community";
 import { Plus, X, Factory, Clock, CheckCircle } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
-import StatsCard from "../../../shared/components/StatsCard";
 import api from "../../../shared/api/client";
 
 interface WoRow {
@@ -194,53 +193,55 @@ export default function WorkOrderPage() {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <StatsCard
-          title={t("wo.inProgress")}
-          value={inProgress}
-          icon={<Factory size={20} />}
-          iconColor="bg-amber-50 text-amber-600"
-        />
-        <StatsCard
-          title={t("wo.plannedReleased")}
-          value={planned}
-          icon={<Clock size={20} />}
-          iconColor="bg-blue-50 text-blue-600"
-        />
-        <StatsCard
-          title={t("wo.completedWo")}
-          value={completed}
-          icon={<CheckCircle size={20} />}
-          iconColor="bg-emerald-50 text-emerald-600"
-        />
+      <div className="workspace-hero mb-6">
+        <p className="section-kicker">Production Workspace</p>
+        <h3 className="section-title">{t("wo.title")}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+          <div className="stat-tile">
+            <span className="field-label"><Factory size={16} className="inline mr-1 text-amber-600" />{t("wo.inProgress")}</span>
+            <span className="text-2xl font-bold text-slate-900">{inProgress}</span>
+          </div>
+          <div className="stat-tile">
+            <span className="field-label"><Clock size={16} className="inline mr-1 text-blue-600" />{t("wo.plannedReleased")}</span>
+            <span className="text-2xl font-bold text-slate-900">{planned}</span>
+          </div>
+          <div className="stat-tile">
+            <span className="field-label"><CheckCircle size={16} className="inline mr-1 text-emerald-600" />{t("wo.completedWo")}</span>
+            <span className="text-2xl font-bold text-slate-900">{completed}</span>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="flex items-center gap-3 mb-4">
-        <select
-          className="input w-44"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="">{t("wo.filterByStatus")}: {t("common.all")}</option>
-          {statuses.map((s) => (
-            <option key={s} value={s}>
-              {String(t("status." + s, s))}
-            </option>
-          ))}
-        </select>
-        <select
-          className="input w-36"
-          value={plantFilter}
-          onChange={(e) => setPlantFilter(e.target.value)}
-        >
-          <option value="">{t("wo.filterByPlant")}: {t("common.all")}</option>
-          {plants.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            className="input w-44 appearance-none pr-8"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">{t("wo.filterByStatus")}: {t("common.all")}</option>
+            {statuses.map((s) => (
+              <option key={s} value={s}>
+                {String(t("status." + s, s))}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="relative">
+          <select
+            className="input w-36 appearance-none pr-8"
+            value={plantFilter}
+            onChange={(e) => setPlantFilter(e.target.value)}
+          >
+            <option value="">{t("wo.filterByPlant")}: {t("common.all")}</option>
+            {plants.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Grid */}
@@ -255,42 +256,45 @@ export default function WorkOrderPage() {
 
       {/* Create Modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h2 className="text-lg font-bold text-slate-900">{t("wo.newWo")}</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm">
+          <div className="rounded-[28px] border border-white/70 bg-white/95 p-6 shadow-[0_32px_80px_rgba(15,23,42,0.28)] w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <p className="section-kicker">{t("wo.title")}</p>
+                <h3 className="section-title">{t("wo.newWo")}</h3>
+              </div>
               <button className="text-slate-400 hover:text-slate-600" onClick={() => setShowCreate(false)}>
                 <X size={20} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.companyCode")}</label>
+                  <label className="field-label">{t("wo.companyCode")}</label>
                   <input className="input w-full" value={form.companyCode} onChange={(e) => updateField("companyCode", e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.plantCode")}</label>
+                  <label className="field-label">{t("wo.plantCode")}</label>
                   <input className="input w-full" value={form.plantCode} onChange={(e) => updateField("plantCode", e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.productCode")}</label>
+                  <label className="field-label">{t("wo.productCode")}</label>
                   <input className="input w-full" value={form.productCode} onChange={(e) => updateField("productCode", e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.productName")}</label>
+                  <label className="field-label">{t("wo.productName")}</label>
                   <input className="input w-full" value={form.productName} onChange={(e) => updateField("productName", e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.plannedQty")}</label>
+                  <label className="field-label">{t("wo.plannedQty")}</label>
                   <input className="input w-full" type="number" value={form.plannedQuantity} onChange={(e) => updateField("plannedQuantity", +e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.uom")}</label>
+                  <label className="field-label">{t("wo.uom")}</label>
                   <input className="input w-full" value={form.unitOfMeasure} onChange={(e) => updateField("unitOfMeasure", e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.orderType")}</label>
+                  <label className="field-label">{t("wo.orderType")}</label>
                   <select className="input w-full" value={form.orderType} onChange={(e) => updateField("orderType", e.target.value)}>
                     <option value="STANDARD">Standard</option>
                     <option value="REWORK">Rework</option>
@@ -298,7 +302,7 @@ export default function WorkOrderPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.priority")}</label>
+                  <label className="field-label">{t("wo.priority")}</label>
                   <select className="input w-full" value={form.priority} onChange={(e) => updateField("priority", e.target.value)}>
                     <option value="LOW">LOW</option>
                     <option value="NORMAL">NORMAL</option>
@@ -307,20 +311,20 @@ export default function WorkOrderPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.salesOrderNo")}</label>
+                  <label className="field-label">{t("wo.salesOrderNo")}</label>
                   <input className="input w-full" value={form.salesOrderNo} onChange={(e) => updateField("salesOrderNo", e.target.value)} placeholder="Optional" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.startDate")}</label>
+                  <label className="field-label">{t("wo.startDate")}</label>
                   <input className="input w-full" type="date" value={form.plannedStartDate} onChange={(e) => updateField("plannedStartDate", e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.endDate")}</label>
+                  <label className="field-label">{t("wo.endDate")}</label>
                   <input className="input w-full" type="date" value={form.plannedEndDate} onChange={(e) => updateField("plannedEndDate", e.target.value)} />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t("wo.remark")}</label>
+                <label className="field-label">{t("wo.remark")}</label>
                 <textarea className="input w-full" rows={2} value={form.remark} onChange={(e) => updateField("remark", e.target.value)} />
               </div>
               <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -328,7 +332,7 @@ export default function WorkOrderPage() {
                 {t("wo.autoPopulate")}
               </label>
             </div>
-            <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
+            <div className="flex justify-end gap-3 mt-6 pt-5 border-t border-slate-100">
               <button className="btn-secondary" onClick={() => setShowCreate(false)}>
                 {t("common.cancel")}
               </button>

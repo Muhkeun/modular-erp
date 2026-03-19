@@ -2,10 +2,9 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { ColDef } from "ag-grid-community";
-import { Package, AlertTriangle, TrendingUp } from "lucide-react";
+import { Package, AlertTriangle, TrendingUp, Search } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
-import StatsCard from "../../../shared/components/StatsCard";
 import api from "../../../shared/api/client";
 
 interface StockRow {
@@ -108,44 +107,49 @@ export default function StockOverviewPage() {
         breadcrumbs={[{ label: t("nav.logistics") }, { label: t("nav.stockOverview") }]}
       />
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <StatsCard
-          title={t("stock.totalItems")}
-          value={totalItems}
-          icon={<Package size={20} />}
-          iconColor="bg-blue-50 text-blue-600"
-        />
-        <StatsCard
-          title={t("stock.outOfStock")}
-          value={outOfStock}
-          change={outOfStock > 0 ? t("stock.actionRequired") : t("stock.allStocked")}
-          changeType={outOfStock > 0 ? "negative" : "positive"}
-          icon={<AlertTriangle size={20} />}
-          iconColor="bg-red-50 text-red-600"
-        />
-        <StatsCard
-          title={t("stock.totalValue")}
-          value={totalValue.toLocaleString("ko-KR", { style: "currency", currency: "KRW", maximumFractionDigits: 0 })}
-          icon={<TrendingUp size={20} />}
-          iconColor="bg-emerald-50 text-emerald-600"
-        />
+      {/* Workspace Hero with stat tiles */}
+      <div className="workspace-hero">
+        <p className="section-kicker">Logistics Workspace</p>
+        <h2 className="section-title">{t("stock.title", "재고 현황")}</h2>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <div className="stat-tile">
+            <span className="text-xs text-slate-500"><Package size={14} className="inline mr-1" />{t("stock.totalItems")}</span>
+            <span className="text-lg font-bold text-slate-800">{totalItems}</span>
+          </div>
+          <div className="stat-tile">
+            <span className="text-xs text-slate-500"><AlertTriangle size={14} className="inline mr-1" />{t("stock.outOfStock")}</span>
+            <span className={`text-lg font-bold ${outOfStock > 0 ? "text-red-600" : "text-emerald-600"}`}>{outOfStock}</span>
+            <span className={`text-xs ${outOfStock > 0 ? "text-red-500" : "text-emerald-500"}`}>
+              {outOfStock > 0 ? t("stock.actionRequired") : t("stock.allStocked")}
+            </span>
+          </div>
+          <div className="stat-tile">
+            <span className="text-xs text-slate-500"><TrendingUp size={14} className="inline mr-1" />{t("stock.totalValue")}</span>
+            <span className="text-lg font-bold text-slate-800">{totalValue.toLocaleString("ko-KR", { style: "currency", currency: "KRW", maximumFractionDigits: 0 })}</span>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="flex items-center gap-3 mb-4">
-        <input
-          className="form-input w-48"
-          placeholder={`${t("gr.plant")} ${t("common.filter")}`}
-          value={filterPlant}
-          onChange={(e) => setFilterPlant(e.target.value)}
-        />
-        <input
-          className="form-input w-64"
-          placeholder={`${t("stock.itemCode")} / ${t("stock.itemName")} ${t("common.search")}`}
-          value={filterItem}
-          onChange={(e) => setFilterItem(e.target.value)}
-        />
+        <div className="lookup-shell">
+          <Search size={15} className="text-slate-400" />
+          <input
+            className="lookup-input"
+            placeholder={`${t("gr.plant")} ${t("common.filter")}`}
+            value={filterPlant}
+            onChange={(e) => setFilterPlant(e.target.value)}
+          />
+        </div>
+        <div className="lookup-shell">
+          <Search size={15} className="text-slate-400" />
+          <input
+            className="lookup-input"
+            placeholder={`${t("stock.itemCode")} / ${t("stock.itemName")} ${t("common.search")}`}
+            value={filterItem}
+            onChange={(e) => setFilterItem(e.target.value)}
+          />
+        </div>
         {(filterPlant || filterItem) && (
           <button
             className="btn-secondary text-sm"

@@ -23,6 +23,9 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
     open-in-view: false
 
+  flyway:
+    enabled: false
+
   jackson:
     default-property-inclusion: non_null
     serialization:
@@ -33,6 +36,32 @@ modular-erp:
     jwt:
       secret: modular-erp-dev-secret-key-must-be-at-least-32-bytes-long
       expiration-ms: 86400000
+    rate-limit:
+      enabled: true
+      default-rpm: 100
+      unauthenticated-rpm: 30
+    sso:
+      enabled: false
+      provider: none
+      client-id: ""
+      client-secret: ""
+      issuer-uri: ""
+      redirect-uri: ""
+      allowed-domains: []
+    cors:
+      allowed-origins: "*"
+  ai:
+    enabled: false
+    provider: anthropic
+    api-key: ${AI_API_KEY:}
+    model: claude-sonnet-4-20250514
+    max-tokens: 4096
+    temperature: 0.3
+    embedding:
+      enabled: false
+    rag:
+      enabled: false
+      max-results: 5
 
 springdoc:
   swagger-ui:
@@ -56,10 +85,11 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
   flyway:
-    enabled: false
+    enabled: true
+    baseline-on-migrate: true

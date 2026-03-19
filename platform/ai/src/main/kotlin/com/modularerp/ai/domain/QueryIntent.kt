@@ -1,0 +1,16 @@
+package com.modularerp.ai.domain
+
+enum class QueryIntent {
+    SALES_SUMMARY,
+    PURCHASE_SUMMARY,
+    STOCK_STATUS,
+    CUSTOMER_LIST,
+    ORDER_STATUS,
+    BUDGET_STATUS,
+    EMPLOYEE_LIST,
+    FINANCIAL_SUMMARY,
+    PRODUCTION_STATUS,
+    DELIVERY_STATUS,
+    APPROVAL_STATUS,
+    GENERAL_QUERY
+}

@@ -6,4 +6,5 @@ import java.util.Optional
 
 interface UserRepository : JpaRepository<User, Long> {
     fun findByTenantIdAndLoginId(tenantId: String, loginId: String): Optional<User>
+    fun countByTenantId(tenantId: String): Long
 }

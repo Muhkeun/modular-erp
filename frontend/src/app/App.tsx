@@ -3,6 +3,9 @@ import { lazy, Suspense } from "react";
 import { useAuth } from "../shared/hooks/useAuth";
 import MainLayout from "./MainLayout";
 import LoginPage from "./LoginPage";
+import { ToastProvider } from "../shared/components/Toast";
+import { ConfirmProvider } from "../shared/components/ConfirmDialog";
+import FullPageLoader from "../shared/components/FullPageLoader";
 
 // Lazy-loaded pages
 const DashboardPage = lazy(() => import("../modules/dashboard/pages/DashboardPage"));
@@ -20,13 +23,31 @@ const SalesOrderPage = lazy(() => import("../modules/sales/pages/SalesOrderPage"
 const JournalEntryPage = lazy(() => import("../modules/account/pages/JournalEntryPage"));
 const EmployeePage = lazy(() => import("../modules/hr/pages/EmployeePage"));
 
-function Loading() {
-  return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" />
-    </div>
-  );
-}
+// Phase 2 modules
+const BudgetPage = lazy(() => import("../modules/budget/pages/BudgetPage"));
+const AssetPage = lazy(() => import("../modules/asset/pages/AssetPage"));
+const PeriodClosePage = lazy(() => import("../modules/period-close/pages/PeriodClosePage"));
+const BatchPage = lazy(() => import("../modules/batch/pages/BatchPage"));
+const NotificationPage = lazy(() => import("../modules/notification/pages/NotificationPage"));
+const CrmPage = lazy(() => import("../modules/crm/pages/CrmPage"));
+const CostingPage = lazy(() => import("../modules/costing/pages/CostingPage"));
+const CurrencyPage = lazy(() => import("../modules/currency/pages/CurrencyPage"));
+
+// Approval
+const ApprovalInboxPage = lazy(() => import("../modules/approval/pages/ApprovalInboxPage"));
+
+// Platform - Settings & Admin
+const SettingsPage = lazy(() => import("../modules/settings/pages/SettingsPage"));
+const RoleManagementPage = lazy(() => import("../modules/admin/pages/RoleManagementPage"));
+const SystemCodePage = lazy(() => import("../modules/admin/pages/SystemCodePage"));
+const AuditLogPage = lazy(() => import("../modules/admin/pages/AuditLogPage"));
+const OrganizationPage = lazy(() => import("../modules/admin/pages/OrganizationPage"));
+const WorkflowDesignerPage = lazy(() => import("../modules/admin/pages/WorkflowDesignerPage"));
+const TenantManagementPage = lazy(() => import("../modules/admin/pages/TenantManagementPage"));
+const ApiKeyPage = lazy(() => import("../modules/admin/pages/ApiKeyPage"));
+
+// AI
+const AiChatPage = lazy(() => import("../modules/ai/pages/AiChatPage"));
 
 export default function App() {
   const { isAuthenticated } = useAuth();
@@ -34,7 +55,9 @@ export default function App() {
   if (!isAuthenticated) return <LoginPage />;
 
   return (
-    <Suspense fallback={<Loading />}>
+    <ToastProvider>
+    <ConfirmProvider>
+    <Suspense fallback={<FullPageLoader />}>
       <Routes>
         <Route element={<MainLayout />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -69,9 +92,53 @@ export default function App() {
 
           {/* HR */}
           <Route path="/hr" element={<EmployeePage />} />
+
+          {/* Budget */}
+          <Route path="/finance/budget" element={<BudgetPage />} />
+
+          {/* Asset */}
+          <Route path="/finance/assets" element={<AssetPage />} />
+
+          {/* Period Close */}
+          <Route path="/finance/period-close" element={<PeriodClosePage />} />
+
+          {/* Costing */}
+          <Route path="/costing" element={<CostingPage />} />
+
+          {/* Currency */}
+          <Route path="/finance/currency" element={<CurrencyPage />} />
+
+          {/* CRM */}
+          <Route path="/crm" element={<CrmPage />} />
+
+          {/* Batch */}
+          <Route path="/admin/batch" element={<BatchPage />} />
+
+          {/* Approval */}
+          <Route path="/approvals" element={<ApprovalInboxPage />} />
+
+          {/* Notification */}
+          <Route path="/notifications" element={<NotificationPage />} />
+
+          {/* Settings */}
+          <Route path="/settings" element={<SettingsPage />} />
+
+          {/* Admin */}
+          <Route path="/admin/roles" element={<RoleManagementPage />} />
+          <Route path="/admin/system-codes" element={<SystemCodePage />} />
+          <Route path="/admin/organizations" element={<OrganizationPage />} />
+          <Route path="/admin/audit-logs" element={<AuditLogPage />} />
+          <Route path="/admin/workflows" element={<WorkflowDesignerPage />} />
+          <Route path="/admin/tenants" element={<TenantManagementPage />} />
+          <Route path="/admin/api-keys" element={<ApiKeyPage />} />
+
+          {/* AI */}
+          <Route path="/ai-chat" element={<AiChatPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
+    </ConfirmProvider>
+    </ToastProvider>
   );
 }

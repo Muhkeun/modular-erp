@@ -9,6 +9,11 @@ dependencies {
     implementation(project(":platform:i18n"))
     implementation(project(":platform:messaging"))
     implementation(project(":platform:web"))
+    implementation(project(":platform:preference"))
+    implementation(project(":platform:admin"))
+    implementation(project(":platform:audit"))
+    implementation(project(":platform:report"))
+    implementation(project(":platform:ai"))
 
     implementation(project(":modules:master-data"))
     implementation(project(":modules:approval"))
@@ -23,9 +28,20 @@ dependencies {
     implementation(project(":modules:contract"))
     implementation(project(":modules:production"))
     implementation(project(":modules:planning"))
+    implementation(project(":modules:batch"))
+    implementation(project(":modules:notification"))
+    implementation(project(":modules:budget"))
+    implementation(project(":modules:asset"))
+    implementation(project(":modules:period-close"))
+    implementation(project(":modules:crm"))
+    implementation(project(":modules:costing"))
+    implementation(project(":modules:currency"))
 
     runtimeOnly(rootProject.libs.postgresql)
     runtimeOnly(rootProject.libs.h2)
     implementation(rootProject.libs.flyway.core)
     implementation(rootProject.libs.flyway.postgres)
+
+    testImplementation(rootProject.libs.testcontainers.postgresql)
+    testImplementation(rootProject.libs.testcontainers.junit)
 }

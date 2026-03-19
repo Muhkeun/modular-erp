@@ -167,88 +167,111 @@ export default function JournalEntryPage() {
           breadcrumbs={[{ label: t("nav.finance") }, { label: t("nav.journalEntries") }, { label: t("common.create") }]}
           actions={<button className="btn-ghost" onClick={() => setMode("list")}><ArrowLeft size={16} /> {t("common.back")}</button>} />
 
-        <div className="card p-6 mb-6">
-          <h3 className="text-base font-semibold text-slate-900 mb-4">{t("common.basicInfo")}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* workspace hero */}
+        <div className="workspace-hero">
+          <p className="section-kicker">Finance Workspace</p>
+          <h3 className="section-title">{t("je.newJe")}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
+            <div className="stat-tile">
+              <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("je.debit")}</span>
+              <span className="text-xl font-bold text-slate-900">{fmt(totalDebit)}</span>
+            </div>
+            <div className="stat-tile">
+              <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("je.credit")}</span>
+              <span className="text-xl font-bold text-slate-900">{fmt(totalCredit)}</span>
+            </div>
+            <div className="stat-tile">
+              <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("je.balanced")}</span>
+              <span className={`text-xl font-bold ${isBalanced ? "text-emerald-600" : "text-red-600"}`}>
+                {isBalanced ? t("common.yes") : t("common.no")}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="section-card">
+          <p className="section-kicker">Entry Header</p>
+          <h3 className="section-title">{t("common.basicInfo")}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div>
-              <label className="label">{t("je.companyCode")}</label>
+              <label className="field-label">{t("je.companyCode")}</label>
               <input className="input" value={form.companyCode} onChange={e => setForm(p => ({ ...p, companyCode: e.target.value }))} />
             </div>
             <div>
-              <label className="label">{t("je.postingDate")}</label>
+              <label className="field-label">{t("je.postingDate")}</label>
               <input className="input" type="date" value={form.postingDate} onChange={e => setForm(p => ({ ...p, postingDate: e.target.value }))} />
             </div>
             <div>
-              <label className="label">{t("je.entryType")}</label>
+              <label className="field-label">{t("je.entryType")}</label>
               <select className="input" value={form.entryType} onChange={e => setForm(p => ({ ...p, entryType: e.target.value }))}>
                 {ENTRY_TYPES.map(et => <option key={et} value={et}>{et}</option>)}
               </select>
             </div>
             <div>
-              <label className="label">{t("je.refDoc")}</label>
+              <label className="field-label">{t("je.refDoc")}</label>
               <input className="input" value={form.referenceDocNo} onChange={e => setForm(p => ({ ...p, referenceDocNo: e.target.value }))} />
             </div>
             <div>
-              <label className="label">{t("je.currencyCode")}</label>
+              <label className="field-label">{t("je.currencyCode")}</label>
               <input className="input" value={form.currencyCode} onChange={e => setForm(p => ({ ...p, currencyCode: e.target.value }))} />
             </div>
             <div className="md:col-span-3">
-              <label className="label">{t("je.description_")}</label>
+              <label className="field-label">{t("je.description_")}</label>
               <textarea className="input" rows={2} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} />
             </div>
           </div>
         </div>
 
         {/* lines */}
-        <div className="card p-6 mb-6">
+        <div className="section-card mt-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-slate-900">{t("common.lines")}</h3>
+            <div>
+              <p className="section-kicker">Journal Lines</p>
+              <h3 className="section-title">{t("common.lines")}</h3>
+            </div>
             <button className="btn-ghost text-sm" onClick={() => setLines(p => [...p, emptyLine()])}><Plus size={14} /> {t("common.addLine")}</button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
-                  <th className="pb-2 pr-2">{t("je.accountCode")}</th>
-                  <th className="pb-2 pr-2">{t("je.accountName")}</th>
-                  <th className="pb-2 pr-2">{t("je.debit")}</th>
-                  <th className="pb-2 pr-2">{t("je.credit")}</th>
-                  <th className="pb-2 pr-2">{t("je.costCenter")}</th>
-                  <th className="pb-2 pr-2">{t("je.lineDescription")}</th>
-                  <th className="pb-2 w-10"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((line, idx) => (
-                  <tr key={idx} className="border-b border-slate-100">
-                    <td className="py-2 pr-2"><input className="input input-sm" value={line.accountCode} onChange={e => updateLine(idx, "accountCode", e.target.value)} /></td>
-                    <td className="py-2 pr-2"><input className="input input-sm" value={line.accountName} onChange={e => updateLine(idx, "accountName", e.target.value)} /></td>
-                    <td className="py-2 pr-2"><input className="input input-sm w-28" type="number" value={line.debitAmount} onChange={e => updateLine(idx, "debitAmount", +e.target.value)} /></td>
-                    <td className="py-2 pr-2"><input className="input input-sm w-28" type="number" value={line.creditAmount} onChange={e => updateLine(idx, "creditAmount", +e.target.value)} /></td>
-                    <td className="py-2 pr-2"><input className="input input-sm" value={line.costCenter} onChange={e => updateLine(idx, "costCenter", e.target.value)} /></td>
-                    <td className="py-2 pr-2"><input className="input input-sm" value={line.description} onChange={e => updateLine(idx, "description", e.target.value)} /></td>
-                    <td className="py-2">
-                      {lines.length > 2 && (
-                        <button className="text-slate-400 hover:text-red-500" onClick={() => setLines(p => p.filter((_, i) => i !== idx))}><Trash2 size={14} /></button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* running totals */}
-          <div className="flex justify-end mt-4 pt-4 border-t border-slate-100 text-sm space-x-6">
-            <span className="text-slate-500">{t("je.debit")}: <strong>{fmt(totalDebit)}</strong></span>
-            <span className="text-slate-500">{t("je.credit")}: <strong>{fmt(totalCredit)}</strong></span>
-            <span className={isBalanced ? "text-emerald-600 font-semibold" : "text-red-600 font-semibold"}>
-              {t("je.balanced")}: {isBalanced ? t("common.yes") : t("common.no")}
-            </span>
+          <div className="space-y-3">
+            {lines.map((line, idx) => (
+              <div key={idx} className="rounded-[26px] border border-slate-200/80 bg-slate-50/70 p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Line {idx + 1}</span>
+                  {lines.length > 2 && (
+                    <button className="text-slate-400 hover:text-red-500" onClick={() => setLines(p => p.filter((_, i) => i !== idx))}><Trash2 size={14} /></button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="field-label">{t("je.accountCode")}</label>
+                    <input className="input input-sm" value={line.accountCode} onChange={e => updateLine(idx, "accountCode", e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="field-label">{t("je.accountName")}</label>
+                    <input className="input input-sm" value={line.accountName} onChange={e => updateLine(idx, "accountName", e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="field-label">{t("je.debit")}</label>
+                    <input className="input input-sm" type="number" value={line.debitAmount} onChange={e => updateLine(idx, "debitAmount", +e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="field-label">{t("je.credit")}</label>
+                    <input className="input input-sm" type="number" value={line.creditAmount} onChange={e => updateLine(idx, "creditAmount", +e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="field-label">{t("je.costCenter")}</label>
+                    <input className="input input-sm" value={line.costCenter} onChange={e => updateLine(idx, "costCenter", e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="field-label">{t("je.lineDescription")}</label>
+                    <input className="input input-sm" value={line.description} onChange={e => updateLine(idx, "description", e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-3 mt-6">
           <button className="btn-ghost" onClick={() => setMode("list")}>{t("common.cancel")}</button>
           <button className="btn-primary" onClick={handleSave} disabled={createMut.isPending}>
             {createMut.isPending ? t("common.saving") : t("common.save")}
@@ -282,51 +305,68 @@ export default function JournalEntryPage() {
         } />
 
       {detailQuery.isLoading ? (
-        <div className="card p-12 text-center text-slate-400">{t("common.loading")}</div>
+        <div className="section-card text-center text-slate-400">{t("common.loading")}</div>
       ) : detail ? (
         <>
-          <div className="card p-6 mb-6">
-            <h3 className="text-base font-semibold text-slate-900 mb-4">{t("common.basicInfo")}</h3>
-            <dl className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-6 text-sm">
-              <div><dt className="text-slate-500">{t("common.status")}</dt><dd><span className={statusStyle[detail.status] || "badge"}>{t("status." + detail.status, detail.status)}</span></dd></div>
-              <div><dt className="text-slate-500">{t("je.companyCode")}</dt><dd className="font-medium">{detail.companyCode}</dd></div>
-              <div><dt className="text-slate-500">{t("je.postingDate")}</dt><dd className="font-medium">{detail.postingDate}</dd></div>
-              <div><dt className="text-slate-500">{t("je.entryType")}</dt><dd className="font-medium">{detail.entryType}</dd></div>
-              <div><dt className="text-slate-500">{t("je.refDoc")}</dt><dd className="font-medium">{detail.referenceDocNo || "-"}</dd></div>
-              <div><dt className="text-slate-500">{t("je.currencyCode")}</dt><dd className="font-medium">{detail.currencyCode}</dd></div>
-              <div className="md:col-span-2"><dt className="text-slate-500">{t("je.description_")}</dt><dd className="font-medium">{detail.description || "-"}</dd></div>
-            </dl>
+          <div className="section-card">
+            <p className="section-kicker">Entry Header</p>
+            <h3 className="section-title">{t("common.basicInfo")}</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("common.status")}</span>
+                <span className={statusStyle[detail.status] || "badge"}>{t("status." + detail.status, detail.status)}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("je.companyCode")}</span>
+                <span className="font-medium text-slate-900">{detail.companyCode}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("je.postingDate")}</span>
+                <span className="font-medium text-slate-900">{detail.postingDate}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("je.entryType")}</span>
+                <span className="font-medium text-slate-900">{detail.entryType}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("je.refDoc")}</span>
+                <span className="font-medium text-slate-900">{detail.referenceDocNo || "-"}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("je.currencyCode")}</span>
+                <span className="font-medium text-slate-900">{detail.currencyCode}</span>
+              </div>
+              <div className="stat-tile md:col-span-2">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("je.description_")}</span>
+                <span className="font-medium text-slate-900">{detail.description || "-"}</span>
+              </div>
+            </div>
           </div>
 
-          <div className="card p-6">
-            <h3 className="text-base font-semibold text-slate-900 mb-4">{t("common.lines")}</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-slate-500">
-                    <th className="pb-2 pr-2">#</th>
-                    <th className="pb-2 pr-2">{t("je.accountCode")}</th>
-                    <th className="pb-2 pr-2">{t("je.accountName")}</th>
-                    <th className="pb-2 pr-2 text-right">{t("je.debit")}</th>
-                    <th className="pb-2 pr-2 text-right">{t("je.credit")}</th>
-                    <th className="pb-2 pr-2">{t("je.costCenter")}</th>
-                    <th className="pb-2">{t("je.lineDescription")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detail.lines?.map((l: JeLine, idx: number) => (
-                    <tr key={idx} className="border-b border-slate-100">
-                      <td className="py-2 pr-2 text-slate-400">{idx + 1}</td>
-                      <td className="py-2 pr-2 font-mono">{l.accountCode}</td>
-                      <td className="py-2 pr-2">{l.accountName}</td>
-                      <td className="py-2 pr-2 text-right">{fmt(l.debitAmount)}</td>
-                      <td className="py-2 pr-2 text-right">{fmt(l.creditAmount)}</td>
-                      <td className="py-2 pr-2">{l.costCenter || "-"}</td>
-                      <td className="py-2">{l.description || "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="section-card mt-6">
+            <p className="section-kicker">Journal Lines</p>
+            <h3 className="section-title">{t("common.lines")}</h3>
+            <div className="grid-table mt-4">
+              <div className="grid-table-row font-medium text-slate-500 text-xs uppercase tracking-wider">
+                <span>#</span>
+                <span>{t("je.accountCode")}</span>
+                <span>{t("je.accountName")}</span>
+                <span className="text-right">{t("je.debit")}</span>
+                <span className="text-right">{t("je.credit")}</span>
+                <span>{t("je.costCenter")}</span>
+                <span>{t("je.lineDescription")}</span>
+              </div>
+              {detail.lines?.map((l: JeLine, idx: number) => (
+                <div key={idx} className="grid-table-row">
+                  <span className="text-slate-400">{idx + 1}</span>
+                  <span className="font-mono">{l.accountCode}</span>
+                  <span>{l.accountName}</span>
+                  <span className="text-right">{fmt(l.debitAmount)}</span>
+                  <span className="text-right">{fmt(l.creditAmount)}</span>
+                  <span>{l.costCenter || "-"}</span>
+                  <span>{l.description || "-"}</span>
+                </div>
+              ))}
             </div>
 
             <div className="flex justify-end mt-4 pt-4 border-t border-slate-100 text-sm space-x-6">
@@ -339,7 +379,7 @@ export default function JournalEntryPage() {
           </div>
         </>
       ) : (
-        <div className="card p-12 text-center text-slate-400">{t("common.noData")}</div>
+        <div className="section-card text-center text-slate-400">{t("common.noData")}</div>
       )}
     </div>
   );

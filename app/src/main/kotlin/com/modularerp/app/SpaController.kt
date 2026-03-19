@@ -22,7 +22,13 @@ class SpaController {
         "/account/**",
         "/hr/**",
         "/quality/**",
-        "/login"
+        "/login",
+        "/settings/**",
+        "/admin/**",
+        "/finance/**",
+        "/costing/**",
+        "/crm/**",
+        "/notifications/**"
     ])
     fun forward(): String = "forward:/index.html"
 }

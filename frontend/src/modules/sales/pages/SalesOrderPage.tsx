@@ -169,98 +169,123 @@ export default function SalesOrderPage() {
           breadcrumbs={[{ label: t("nav.sales") }, { label: t("nav.salesOrders") }, { label: t("common.create") }]}
           actions={<button className="btn-ghost" onClick={() => setMode("list")}><ArrowLeft size={16} /> {t("common.back")}</button>} />
 
-        <div className="card p-6 mb-6">
-          <h3 className="text-base font-semibold text-slate-900 mb-4">{t("common.basicInfo")}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* workspace hero */}
+        <div className="workspace-hero">
+          <p className="section-kicker">Sales Workspace</p>
+          <h3 className="section-title">{t("so.newSo")}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
+            <div className="stat-tile">
+              <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("so.totalAmount")}</span>
+              <span className="text-xl font-bold text-slate-900">{fmt(totals.totalAmount)}</span>
+            </div>
+            <div className="stat-tile">
+              <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("so.taxAmount")}</span>
+              <span className="text-xl font-bold text-slate-900">{fmt(totals.taxAmount)}</span>
+            </div>
+            <div className="stat-tile">
+              <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("so.grandTotal")}</span>
+              <span className="text-xl font-bold text-slate-900">{fmt(totals.totalAmount + totals.taxAmount)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="section-card">
+          <p className="section-kicker">Order Header</p>
+          <h3 className="section-title">{t("common.basicInfo")}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div>
-              <label className="label">{t("so.companyCode")}</label>
+              <label className="field-label">{t("so.companyCode")}</label>
               <input className="input" value={form.companyCode} onChange={e => setForm(p => ({ ...p, companyCode: e.target.value }))} />
             </div>
             <div>
-              <label className="label">{t("so.plantCode")}</label>
+              <label className="field-label">{t("so.plantCode")}</label>
               <input className="input" value={form.plantCode} onChange={e => setForm(p => ({ ...p, plantCode: e.target.value }))} />
             </div>
             <div>
-              <label className="label">{t("so.customerCode")}</label>
+              <label className="field-label">{t("so.customerCode")}</label>
               <input className="input" value={form.customerCode} onChange={e => setForm(p => ({ ...p, customerCode: e.target.value }))} />
             </div>
             <div>
-              <label className="label">{t("so.customerName")}</label>
+              <label className="field-label">{t("so.customerName")}</label>
               <input className="input" value={form.customerName} onChange={e => setForm(p => ({ ...p, customerName: e.target.value }))} />
             </div>
             <div>
-              <label className="label">{t("so.deliveryDate")}</label>
+              <label className="field-label">{t("so.deliveryDate")}</label>
               <input className="input" type="date" value={form.deliveryDate} onChange={e => setForm(p => ({ ...p, deliveryDate: e.target.value }))} />
             </div>
             <div>
-              <label className="label">{t("so.currencyCode")}</label>
+              <label className="field-label">{t("so.currencyCode")}</label>
               <input className="input" value={form.currencyCode} onChange={e => setForm(p => ({ ...p, currencyCode: e.target.value }))} />
             </div>
             <div>
-              <label className="label">{t("so.paymentTerms")}</label>
+              <label className="field-label">{t("so.paymentTerms")}</label>
               <input className="input" value={form.paymentTerms} onChange={e => setForm(p => ({ ...p, paymentTerms: e.target.value }))} />
             </div>
             <div className="md:col-span-2">
-              <label className="label">{t("so.shippingAddress")}</label>
+              <label className="field-label">{t("so.shippingAddress")}</label>
               <input className="input" value={form.shippingAddress} onChange={e => setForm(p => ({ ...p, shippingAddress: e.target.value }))} />
             </div>
             <div className="md:col-span-3">
-              <label className="label">{t("so.remark")}</label>
+              <label className="field-label">{t("so.remark")}</label>
               <textarea className="input" rows={2} value={form.remark} onChange={e => setForm(p => ({ ...p, remark: e.target.value }))} />
             </div>
           </div>
         </div>
 
         {/* lines */}
-        <div className="card p-6 mb-6">
+        <div className="section-card mt-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-slate-900">{t("common.lines")}</h3>
+            <div>
+              <p className="section-kicker">Line Items</p>
+              <h3 className="section-title">{t("common.lines")}</h3>
+            </div>
             <button className="btn-ghost text-sm" onClick={() => setLines(p => [...p, emptyLine()])}><Plus size={14} /> {t("common.addLine")}</button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
-                  <th className="pb-2 pr-2">{t("so.itemCode")}</th>
-                  <th className="pb-2 pr-2">{t("so.itemName")}</th>
-                  <th className="pb-2 pr-2">{t("so.quantity")}</th>
-                  <th className="pb-2 pr-2">{t("so.uom")}</th>
-                  <th className="pb-2 pr-2">{t("so.unitPrice")}</th>
-                  <th className="pb-2 pr-2">{t("so.taxRate")}</th>
-                  <th className="pb-2 pr-2">{t("so.specification")}</th>
-                  <th className="pb-2 w-10"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((line, idx) => (
-                  <tr key={idx} className="border-b border-slate-100">
-                    <td className="py-2 pr-2"><input className="input input-sm" value={line.itemCode} onChange={e => updateLine(idx, "itemCode", e.target.value)} /></td>
-                    <td className="py-2 pr-2"><input className="input input-sm" value={line.itemName} onChange={e => updateLine(idx, "itemName", e.target.value)} /></td>
-                    <td className="py-2 pr-2"><input className="input input-sm w-20" type="number" value={line.quantity} onChange={e => updateLine(idx, "quantity", +e.target.value)} /></td>
-                    <td className="py-2 pr-2"><input className="input input-sm w-16" value={line.unitOfMeasure} onChange={e => updateLine(idx, "unitOfMeasure", e.target.value)} /></td>
-                    <td className="py-2 pr-2"><input className="input input-sm w-28" type="number" value={line.unitPrice} onChange={e => updateLine(idx, "unitPrice", +e.target.value)} /></td>
-                    <td className="py-2 pr-2"><input className="input input-sm w-16" type="number" value={line.taxRate} onChange={e => updateLine(idx, "taxRate", +e.target.value)} /></td>
-                    <td className="py-2 pr-2"><input className="input input-sm" value={line.specification} onChange={e => updateLine(idx, "specification", e.target.value)} /></td>
-                    <td className="py-2">
-                      {lines.length > 1 && (
-                        <button className="text-slate-400 hover:text-red-500" onClick={() => setLines(p => p.filter((_, i) => i !== idx))}><Trash2 size={14} /></button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* totals */}
-          <div className="flex justify-end mt-4 text-sm space-x-6">
-            <span className="text-slate-500">{t("so.totalAmount")}: <strong>{fmt(totals.totalAmount)}</strong></span>
-            <span className="text-slate-500">{t("so.taxAmount")}: <strong>{fmt(totals.taxAmount)}</strong></span>
-            <span className="text-slate-900 font-semibold">{t("so.grandTotal")}: {fmt(totals.totalAmount + totals.taxAmount)}</span>
+          <div className="space-y-3">
+            {lines.map((line, idx) => (
+              <div key={idx} className="rounded-[26px] border border-slate-200/80 bg-slate-50/70 p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Line {idx + 1}</span>
+                  {lines.length > 1 && (
+                    <button className="text-slate-400 hover:text-red-500" onClick={() => setLines(p => p.filter((_, i) => i !== idx))}><Trash2 size={14} /></button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <label className="field-label">{t("so.itemCode")}</label>
+                    <input className="input input-sm" value={line.itemCode} onChange={e => updateLine(idx, "itemCode", e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="field-label">{t("so.itemName")}</label>
+                    <input className="input input-sm" value={line.itemName} onChange={e => updateLine(idx, "itemName", e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="field-label">{t("so.quantity")}</label>
+                    <input className="input input-sm" type="number" value={line.quantity} onChange={e => updateLine(idx, "quantity", +e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="field-label">{t("so.uom")}</label>
+                    <input className="input input-sm" value={line.unitOfMeasure} onChange={e => updateLine(idx, "unitOfMeasure", e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="field-label">{t("so.unitPrice")}</label>
+                    <input className="input input-sm" type="number" value={line.unitPrice} onChange={e => updateLine(idx, "unitPrice", +e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="field-label">{t("so.taxRate")}</label>
+                    <input className="input input-sm" type="number" value={line.taxRate} onChange={e => updateLine(idx, "taxRate", +e.target.value)} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="field-label">{t("so.specification")}</label>
+                    <input className="input input-sm" value={line.specification} onChange={e => updateLine(idx, "specification", e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-3 mt-6">
           <button className="btn-ghost" onClick={() => setMode("list")}>{t("common.cancel")}</button>
           <button className="btn-primary" onClick={handleSave} disabled={createMut.isPending}>
             {createMut.isPending ? t("common.saving") : t("common.save")}
@@ -297,70 +322,102 @@ export default function SalesOrderPage() {
         } />
 
       {detailQuery.isLoading ? (
-        <div className="card p-12 text-center text-slate-400">{t("common.loading")}</div>
+        <div className="section-card text-center text-slate-400">{t("common.loading")}</div>
       ) : detail ? (
         <>
-          <div className="card p-6 mb-6">
-            <h3 className="text-base font-semibold text-slate-900 mb-4">{t("common.basicInfo")}</h3>
-            <dl className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-6 text-sm">
-              <div><dt className="text-slate-500">{t("common.status")}</dt><dd><span className={statusStyle[detail.status] || "badge"}>{t("status." + detail.status, detail.status)}</span></dd></div>
-              <div><dt className="text-slate-500">{t("so.companyCode")}</dt><dd className="font-medium">{detail.companyCode}</dd></div>
-              <div><dt className="text-slate-500">{t("so.plantCode")}</dt><dd className="font-medium">{detail.plantCode}</dd></div>
-              <div><dt className="text-slate-500">{t("so.customerCode")}</dt><dd className="font-medium">{detail.customerCode}</dd></div>
-              <div><dt className="text-slate-500">{t("so.customer")}</dt><dd className="font-medium">{detail.customerName}</dd></div>
-              <div><dt className="text-slate-500">{t("so.orderDate")}</dt><dd className="font-medium">{detail.orderDate}</dd></div>
-              <div><dt className="text-slate-500">{t("so.deliveryDate")}</dt><dd className="font-medium">{detail.deliveryDate || "-"}</dd></div>
-              <div><dt className="text-slate-500">{t("so.currencyCode")}</dt><dd className="font-medium">{detail.currencyCode}</dd></div>
-              <div><dt className="text-slate-500">{t("so.paymentTerms")}</dt><dd className="font-medium">{detail.paymentTerms || "-"}</dd></div>
-              <div className="md:col-span-2"><dt className="text-slate-500">{t("so.shippingAddress")}</dt><dd className="font-medium">{detail.shippingAddress || "-"}</dd></div>
-              <div className="md:col-span-4"><dt className="text-slate-500">{t("so.remark")}</dt><dd className="font-medium">{detail.remark || "-"}</dd></div>
-            </dl>
+          <div className="section-card">
+            <p className="section-kicker">Order Header</p>
+            <h3 className="section-title">{t("common.basicInfo")}</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("common.status")}</span>
+                <span className={statusStyle[detail.status] || "badge"}>{t("status." + detail.status, detail.status)}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("so.companyCode")}</span>
+                <span className="font-medium text-slate-900">{detail.companyCode}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("so.plantCode")}</span>
+                <span className="font-medium text-slate-900">{detail.plantCode}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("so.customerCode")}</span>
+                <span className="font-medium text-slate-900">{detail.customerCode}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("so.customer")}</span>
+                <span className="font-medium text-slate-900">{detail.customerName}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("so.orderDate")}</span>
+                <span className="font-medium text-slate-900">{detail.orderDate}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("so.deliveryDate")}</span>
+                <span className="font-medium text-slate-900">{detail.deliveryDate || "-"}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("so.currencyCode")}</span>
+                <span className="font-medium text-slate-900">{detail.currencyCode}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("so.paymentTerms")}</span>
+                <span className="font-medium text-slate-900">{detail.paymentTerms || "-"}</span>
+              </div>
+              <div className="stat-tile md:col-span-2">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("so.shippingAddress")}</span>
+                <span className="font-medium text-slate-900">{detail.shippingAddress || "-"}</span>
+              </div>
+              <div className="stat-tile md:col-span-4">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("so.remark")}</span>
+                <span className="font-medium text-slate-900">{detail.remark || "-"}</span>
+              </div>
+            </div>
           </div>
 
-          <div className="card p-6">
-            <h3 className="text-base font-semibold text-slate-900 mb-4">{t("common.lines")}</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-slate-500">
-                    <th className="pb-2 pr-2">#</th>
-                    <th className="pb-2 pr-2">{t("so.itemCode")}</th>
-                    <th className="pb-2 pr-2">{t("so.itemName")}</th>
-                    <th className="pb-2 pr-2 text-right">{t("so.quantity")}</th>
-                    <th className="pb-2 pr-2">{t("so.uom")}</th>
-                    <th className="pb-2 pr-2 text-right">{t("so.unitPrice")}</th>
-                    <th className="pb-2 pr-2 text-right">{t("so.taxRate")}</th>
-                    <th className="pb-2 pr-2">{t("so.specification")}</th>
-                    <th className="pb-2 text-right">{t("common.amount")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detail.lines?.map((l: SoLine, idx: number) => (
-                    <tr key={idx} className="border-b border-slate-100">
-                      <td className="py-2 pr-2 text-slate-400">{idx + 1}</td>
-                      <td className="py-2 pr-2 font-mono">{l.itemCode}</td>
-                      <td className="py-2 pr-2">{l.itemName}</td>
-                      <td className="py-2 pr-2 text-right">{l.quantity}</td>
-                      <td className="py-2 pr-2">{l.unitOfMeasure}</td>
-                      <td className="py-2 pr-2 text-right">{fmt(l.unitPrice)}</td>
-                      <td className="py-2 pr-2 text-right">{l.taxRate}%</td>
-                      <td className="py-2 pr-2">{l.specification || "-"}</td>
-                      <td className="py-2 text-right font-medium">{fmt(l.quantity * l.unitPrice)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="section-card mt-6">
+            <p className="section-kicker">Line Items</p>
+            <h3 className="section-title">{t("common.lines")}</h3>
+            <div className="grid-table mt-4">
+              <div className="grid-table-row font-medium text-slate-500 text-xs uppercase tracking-wider">
+                <span>#</span>
+                <span>{t("so.itemCode")}</span>
+                <span>{t("so.itemName")}</span>
+                <span className="text-right">{t("so.quantity")}</span>
+                <span>{t("so.uom")}</span>
+                <span className="text-right">{t("so.unitPrice")}</span>
+                <span className="text-right">{t("so.taxRate")}</span>
+                <span>{t("so.specification")}</span>
+                <span className="text-right">{t("common.amount")}</span>
+              </div>
+              {detail.lines?.map((l: SoLine, idx: number) => (
+                <div key={idx} className="grid-table-row">
+                  <span className="text-slate-400">{idx + 1}</span>
+                  <span className="font-mono">{l.itemCode}</span>
+                  <span>{l.itemName}</span>
+                  <span className="text-right">{l.quantity}</span>
+                  <span>{l.unitOfMeasure}</span>
+                  <span className="text-right">{fmt(l.unitPrice)}</span>
+                  <span className="text-right">{l.taxRate}%</span>
+                  <span>{l.specification || "-"}</span>
+                  <span className="text-right font-medium">{fmt(l.quantity * l.unitPrice)}</span>
+                </div>
+              ))}
             </div>
 
-            <div className="flex justify-end mt-4 pt-4 border-t border-slate-100 text-sm space-x-6">
-              <span className="text-slate-500">{t("so.totalAmount")}: <strong>{fmt(detail.totalAmount)}</strong></span>
-              <span className="text-slate-500">{t("so.taxAmount")}: <strong>{fmt(detail.taxAmount)}</strong></span>
-              <span className="text-slate-900 font-bold text-base">{t("so.grandTotal")}: {fmt(detail.grandTotal)}</span>
+            {/* dark summary box */}
+            <div className="rounded-[24px] bg-slate-950 p-5 text-white mt-5">
+              <div className="flex justify-end text-sm space-x-6">
+                <span className="text-slate-400">{t("so.totalAmount")}: <strong className="text-white">{fmt(detail.totalAmount)}</strong></span>
+                <span className="text-slate-400">{t("so.taxAmount")}: <strong className="text-white">{fmt(detail.taxAmount)}</strong></span>
+                <span className="font-bold text-base">{t("so.grandTotal")}: {fmt(detail.grandTotal)}</span>
+              </div>
             </div>
           </div>
         </>
       ) : (
-        <div className="card p-12 text-center text-slate-400">{t("common.noData")}</div>
+        <div className="section-card text-center text-slate-400">{t("common.noData")}</div>
       )}
     </div>
   );

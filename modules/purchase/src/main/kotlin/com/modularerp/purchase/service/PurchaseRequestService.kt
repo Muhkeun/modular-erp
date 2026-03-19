@@ -1,6 +1,7 @@
 package com.modularerp.purchase.service
 
 import com.modularerp.core.exception.EntityNotFoundException
+import com.modularerp.core.port.ApprovalPort
 import com.modularerp.document.service.DocumentNumberGenerator
 import com.modularerp.purchase.domain.*
 import com.modularerp.purchase.dto.*
@@ -15,7 +16,8 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class PurchaseRequestService(
     private val prRepository: PurchaseRequestRepository,
-    private val docNumberGenerator: DocumentNumberGenerator
+    private val docNumberGenerator: DocumentNumberGenerator,
+    private val approvalPort: ApprovalPort? = null
 ) {
 
     fun getById(id: Long): PrResponse {
@@ -59,7 +61,22 @@ class PurchaseRequestService(
     fun submit(id: Long): PrResponse {
         val pr = findPr(id)
         pr.submit()
-        return prRepository.save(pr).toResponse()
+        val saved = prRepository.save(pr)
+
+        // Submit for workflow approval if ApprovalPort is available
+        try {
+            approvalPort?.submitForApproval(
+                documentType = "PR",
+                documentId = saved.id,
+                documentNo = saved.documentNo,
+                submittedBy = TenantContext.getUserId() ?: "anonymous",
+                tenantId = TenantContext.getTenantId()
+            )
+        } catch (_: Exception) {
+            // If no workflow is configured, continue without approval workflow
+        }
+
+        return saved.toResponse()
     }
 
     @Transactional

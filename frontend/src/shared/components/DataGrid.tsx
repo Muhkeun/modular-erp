@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, type ReactNode } from "react";
 import { AgGridReact } from "ag-grid-react";
 import type { ColDef, GridReadyEvent } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
+import EmptyState from "./EmptyState";
 
 export interface DataGridProps<T> {
   rowData: T[];
@@ -16,6 +17,10 @@ export interface DataGridProps<T> {
   onPageChange?: (page: number) => void;
   height?: string;
   domLayout?: "normal" | "autoHeight";
+  emptyTitle?: string;
+  emptyDescription?: string;
+  emptyAction?: ReactNode;
+  emptyIcon?: ReactNode;
 }
 
 export default function DataGrid<T>({
@@ -27,6 +32,10 @@ export default function DataGrid<T>({
   pageSize = 20,
   height = "calc(100vh - 320px)",
   domLayout = "normal",
+  emptyTitle,
+  emptyDescription,
+  emptyAction,
+  emptyIcon,
 }: DataGridProps<T>) {
   const gridRef = useRef<AgGridReact<T>>(null);
 
@@ -52,8 +61,20 @@ export default function DataGrid<T>({
     [onRowClicked]
   );
 
+  // Show EmptyState when not loading and no data
+  if (!loading && rowData.length === 0 && emptyTitle) {
+    return (
+      <EmptyState
+        icon={emptyIcon}
+        title={emptyTitle}
+        description={emptyDescription}
+        action={emptyAction}
+      />
+    );
+  }
+
   return (
-    <div className="ag-theme-custom" style={{ height, width: "100%" }}>
+    <div data-testid="data-grid" className="ag-theme-custom" style={{ height, width: "100%" }}>
       <AgGridReact<T>
         ref={gridRef}
         rowData={rowData}
@@ -68,7 +89,7 @@ export default function DataGrid<T>({
         animateRows
         suppressCellFocus
         domLayout={domLayout}
-        overlayLoadingTemplate='<div class="flex items-center gap-2 text-sm text-slate-500"><span class="animate-spin">⟳</span> Loading...</div>'
+        overlayLoadingTemplate='<div class="flex items-center gap-2 text-sm text-slate-500"><span class="animate-spin">&#x27F3;</span> Loading...</div>'
         overlayNoRowsTemplate='<div class="text-sm text-slate-400 py-8">No data found</div>'
         loading={loading}
       />

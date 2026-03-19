@@ -5,6 +5,11 @@ spring-dependency-management = "1.1.7"
 jjwt = "0.12.6"
 springdoc = "2.8.5"
 flyway = "10.22.0"
+itext = "8.0.5"
+itext-html2pdf = "5.0.5"
+poi = "5.3.0"
+testcontainers = "1.20.4"
+langchain4j = "1.0.0-beta3"
 
 [libraries]
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
@@ -27,6 +32,18 @@ jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
 springdoc-openapi = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 
 h2 = { module = "com.h2database:h2" }
+
+testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+testcontainers-junit = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
+
+langchain4j-core = { module = "dev.langchain4j:langchain4j-core", version.ref = "langchain4j" }
+langchain4j-anthropic = { module = "dev.langchain4j:langchain4j-anthropic", version.ref = "langchain4j" }
+langchain4j-embeddings = { module = "dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2", version.ref = "langchain4j" }
+langchain4j-pgvector = { module = "dev.langchain4j:langchain4j-pgvector", version.ref = "langchain4j" }
+
+itext-core = { module = "com.itextpdf:itext-core", version.ref = "itext" }
+itext-html2pdf = { module = "com.itextpdf:html2pdf", version.ref = "itext-html2pdf" }
+poi-ooxml = { module = "org.apache.poi:poi-ooxml", version.ref = "poi" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

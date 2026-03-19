@@ -221,89 +221,114 @@ export default function GoodsIssuePage() {
           }
         />
 
-        <div className="card p-6 space-y-6">
+        {/* Workspace Hero */}
+        <div className="workspace-hero">
+          <p className="section-kicker">Logistics Workspace</p>
+          <h2 className="section-title">{t("gi.newGi", "출고 전표 등록")}</h2>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <div className="stat-tile">
+              <span className="text-xs text-slate-500">Line Items</span>
+              <span className="text-lg font-bold text-slate-800">{form.lines.length}</span>
+            </div>
+            <div className="stat-tile">
+              <span className="text-xs text-slate-500">Total Qty</span>
+              <span className="text-lg font-bold text-slate-800">{form.lines.reduce((s, l) => s + l.quantity, 0)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
           {/* Header fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <label className="form-group">
-              <span className="form-label">Company Code *</span>
-              <input className="form-input" value={form.companyCode} onChange={(e) => updateField("companyCode", e.target.value)} />
-            </label>
-            <label className="form-group">
-              <span className="form-label">{t("gr.plant")} *</span>
-              <input className="form-input" value={form.plantCode} onChange={(e) => updateField("plantCode", e.target.value)} />
-            </label>
-            <label className="form-group">
-              <span className="form-label">{t("gr.storage")} *</span>
-              <input className="form-input" value={form.storageLocation} onChange={(e) => updateField("storageLocation", e.target.value)} />
-            </label>
-            <label className="form-group">
-              <span className="form-label">{t("gi.issueType")} *</span>
-              <select className="form-input" value={form.issueType} onChange={(e) => updateField("issueType", e.target.value)}>
-                {ISSUE_TYPES.map((it) => (
-                  <option key={it} value={it}>{t("gi.types." + it, it)}</option>
-                ))}
-              </select>
-            </label>
-            <label className="form-group">
-              <span className="form-label">{t("gi.refDoc")}</span>
-              <input className="form-input" value={form.referenceDocNo} onChange={(e) => updateField("referenceDocNo", e.target.value)} />
-            </label>
-            <label className="form-group">
-              <span className="form-label">{t("gi.issueDate")} *</span>
-              <input className="form-input" type="date" value={form.issueDate} onChange={(e) => updateField("issueDate", e.target.value)} />
-            </label>
-            <label className="form-group sm:col-span-2 lg:col-span-3">
-              <span className="form-label">Remark</span>
-              <input className="form-input" value={form.remark} onChange={(e) => updateField("remark", e.target.value)} />
-            </label>
+          <div className="section-card">
+            <p className="section-kicker">Issue Header</p>
+            <h3 className="section-title">{t("gi.title", "헤더 정보")}</h3>
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="field-label">Company Code *</label>
+                <input className="input mt-2" value={form.companyCode} onChange={(e) => updateField("companyCode", e.target.value)} />
+              </div>
+              <div>
+                <label className="field-label">{t("gr.plant")} *</label>
+                <input className="input mt-2" value={form.plantCode} onChange={(e) => updateField("plantCode", e.target.value)} />
+              </div>
+              <div>
+                <label className="field-label">{t("gr.storage")} *</label>
+                <input className="input mt-2" value={form.storageLocation} onChange={(e) => updateField("storageLocation", e.target.value)} />
+              </div>
+              <div>
+                <label className="field-label">{t("gi.issueType")} *</label>
+                <select className="input mt-2" value={form.issueType} onChange={(e) => updateField("issueType", e.target.value)}>
+                  {ISSUE_TYPES.map((it) => (
+                    <option key={it} value={it}>{t("gi.types." + it, it)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="field-label">{t("gi.refDoc")}</label>
+                <input className="input mt-2" value={form.referenceDocNo} onChange={(e) => updateField("referenceDocNo", e.target.value)} />
+              </div>
+              <div>
+                <label className="field-label">{t("gi.issueDate")} *</label>
+                <input className="input mt-2" type="date" value={form.issueDate} onChange={(e) => updateField("issueDate", e.target.value)} />
+              </div>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <label className="field-label">Remark</label>
+                <input className="input mt-2" value={form.remark} onChange={(e) => updateField("remark", e.target.value)} />
+              </div>
+            </div>
           </div>
 
           {/* Line items */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-slate-700">Line Items</h3>
+          <div className="section-card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="section-kicker">Issue Lines</p>
+                <h3 className="section-title">Line Items</h3>
+              </div>
               <button className="btn-secondary text-sm" onClick={addLine}>
                 <Plus size={14} /> {t("common.new", "행 추가")}
               </button>
             </div>
-            <div className="overflow-x-auto">
-              <table className="table w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className="w-8">#</th>
-                    <th>{t("stock.itemCode")}</th>
-                    <th>{t("stock.itemName")}</th>
-                    <th className="w-24">Qty</th>
-                    <th className="w-20">{t("item.uom")}</th>
-                    <th className="w-28">{t("gr.storage")}</th>
-                    <th className="w-12"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {form.lines.map((line, idx) => (
-                    <tr key={idx}>
-                      <td className="text-slate-400">{idx + 1}</td>
-                      <td><input className="form-input form-input-sm" value={line.itemCode} onChange={(e) => updateLine(idx, "itemCode", e.target.value)} /></td>
-                      <td><input className="form-input form-input-sm" value={line.itemName} onChange={(e) => updateLine(idx, "itemName", e.target.value)} /></td>
-                      <td><input className="form-input form-input-sm" type="number" value={line.quantity} onChange={(e) => updateLine(idx, "quantity", Number(e.target.value))} /></td>
-                      <td><input className="form-input form-input-sm" value={line.unitOfMeasure} onChange={(e) => updateLine(idx, "unitOfMeasure", e.target.value)} /></td>
-                      <td><input className="form-input form-input-sm" value={line.storageLocation} onChange={(e) => updateLine(idx, "storageLocation", e.target.value)} /></td>
-                      <td>
-                        {form.lines.length > 1 && (
-                          <button className="text-red-400 hover:text-red-600" onClick={() => removeLine(idx)}>
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="mt-4 space-y-3">
+              {form.lines.map((line, idx) => (
+                <div key={idx} className="rounded-[26px] border border-slate-200/80 bg-slate-50/70 p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-semibold text-slate-400">#{idx + 1}</span>
+                    {form.lines.length > 1 && (
+                      <button className="text-red-400 hover:text-red-600" onClick={() => removeLine(idx)}>
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="field-label">{t("stock.itemCode")}</label>
+                      <input className="input mt-2" value={line.itemCode} onChange={(e) => updateLine(idx, "itemCode", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="field-label">{t("stock.itemName")}</label>
+                      <input className="input mt-2" value={line.itemName} onChange={(e) => updateLine(idx, "itemName", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="field-label">Qty</label>
+                      <input className="input mt-2" type="number" value={line.quantity} onChange={(e) => updateLine(idx, "quantity", Number(e.target.value))} />
+                    </div>
+                    <div>
+                      <label className="field-label">{t("item.uom")}</label>
+                      <input className="input mt-2" value={line.unitOfMeasure} onChange={(e) => updateLine(idx, "unitOfMeasure", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="field-label">{t("gr.storage")}</label>
+                      <input className="input mt-2" value={line.storageLocation} onChange={(e) => updateLine(idx, "storageLocation", e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
           {saveMutation.isError && (
-            <div className="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2">
+            <div className="rounded-[22px] bg-red-50 p-4 text-sm text-red-600">
               {(saveMutation.error as Error)?.message || "Save failed"}
             </div>
           )}
@@ -335,88 +360,87 @@ export default function GoodsIssuePage() {
           }
         />
 
-        <div className="card p-6 space-y-6">
-          {/* Status badge */}
-          <div className="flex items-center gap-3">
-            <span className={statusStyle[d.status || ""] || "badge"}>
-              {String(t("status." + d.status, d.status ?? ""))}
-            </span>
-            {isDraft && (
-              <span className="text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded-md">
-                {t("gi.confirmWarning", "확정하면 재고가 차감됩니다")}
-              </span>
-            )}
-          </div>
+        <div className="space-y-6">
+          {/* Status & header info */}
+          <div className="section-card">
+            <p className="section-kicker">Issue Detail</p>
+            <h3 className="section-title">{d.documentNo}</h3>
 
-          {/* Header info */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
-            <div>
-              <span className="text-slate-400">{t("gi.docNo")}</span>
-              <p className="font-mono font-semibold">{d.documentNo}</p>
+            <div className="mt-4 flex items-center gap-3">
+              <span className={statusStyle[d.status || ""] || "badge"}>
+                {String(t("status." + d.status, d.status ?? ""))}
+              </span>
+              {isDraft && (
+                <span className="text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded-md">
+                  {t("gi.confirmWarning", "확정하면 재고가 차감됩니다")}
+                </span>
+              )}
             </div>
-            <div>
-              <span className="text-slate-400">{t("gi.issueType")}</span>
-              <p className="font-semibold">{t("gi.types." + d.issueType, d.issueType)}</p>
-            </div>
-            <div>
-              <span className="text-slate-400">{t("gr.plant")}</span>
-              <p className="font-semibold">{d.plantCode}</p>
-            </div>
-            <div>
-              <span className="text-slate-400">{t("gr.storage")}</span>
-              <p className="font-semibold">{d.storageLocation}</p>
-            </div>
-            <div>
-              <span className="text-slate-400">{t("gi.refDoc")}</span>
-              <p className="font-mono">{d.referenceDocNo || "-"}</p>
-            </div>
-            <div>
-              <span className="text-slate-400">{t("gi.issueDate")}</span>
-              <p className="font-semibold">{d.issueDate}</p>
-            </div>
-            {d.remark && (
-              <div className="col-span-2">
-                <span className="text-slate-400">Remark</span>
-                <p>{d.remark}</p>
+
+            <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="stat-tile">
+                <span className="text-xs text-slate-500">{t("gi.docNo")}</span>
+                <span className="font-mono font-semibold">{d.documentNo}</span>
               </div>
-            )}
+              <div className="stat-tile">
+                <span className="text-xs text-slate-500">{t("gi.issueType")}</span>
+                <span className="font-semibold">{t("gi.types." + d.issueType, d.issueType)}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs text-slate-500">{t("gr.plant")}</span>
+                <span className="font-semibold">{d.plantCode}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs text-slate-500">{t("gr.storage")}</span>
+                <span className="font-semibold">{d.storageLocation}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs text-slate-500">{t("gi.refDoc")}</span>
+                <span className="font-mono">{d.referenceDocNo || "-"}</span>
+              </div>
+              <div className="stat-tile">
+                <span className="text-xs text-slate-500">{t("gi.issueDate")}</span>
+                <span className="font-semibold">{d.issueDate}</span>
+              </div>
+              {d.remark && (
+                <div className="stat-tile col-span-2">
+                  <span className="text-xs text-slate-500">Remark</span>
+                  <span>{d.remark}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Lines table */}
           {d.lines && d.lines.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Line Items</h3>
-              <div className="overflow-x-auto">
-                <table className="table w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>{t("stock.itemCode")}</th>
-                      <th>{t("stock.itemName")}</th>
-                      <th>Qty</th>
-                      <th>{t("item.uom")}</th>
-                      <th>{t("gr.storage")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {d.lines.map((line, idx) => (
-                      <tr key={idx}>
-                        <td className="text-slate-400">{idx + 1}</td>
-                        <td className="font-mono">{line.itemCode}</td>
-                        <td>{line.itemName}</td>
-                        <td className="text-right">{line.quantity}</td>
-                        <td>{line.unitOfMeasure}</td>
-                        <td>{line.storageLocation}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="section-card">
+              <p className="section-kicker">Issue Lines</p>
+              <h3 className="section-title">Line Items</h3>
+              <div className="grid-table mt-4">
+                <div className="grid-table-row font-semibold text-xs text-slate-500">
+                  <span>#</span>
+                  <span>{t("stock.itemCode")}</span>
+                  <span>{t("stock.itemName")}</span>
+                  <span className="text-right">Qty</span>
+                  <span>{t("item.uom")}</span>
+                  <span>{t("gr.storage")}</span>
+                </div>
+                {d.lines.map((line, idx) => (
+                  <div key={idx} className="grid-table-row">
+                    <span className="text-slate-400">{idx + 1}</span>
+                    <span className="font-mono">{line.itemCode}</span>
+                    <span>{line.itemName}</span>
+                    <span className="text-right">{line.quantity}</span>
+                    <span>{line.unitOfMeasure}</span>
+                    <span>{line.storageLocation}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
           {confirmMutation.isError && (
-            <div className="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2">
+            <div className="rounded-[22px] bg-red-50 p-4 text-sm text-red-600">
               {(confirmMutation.error as Error)?.message || "Confirm failed"}
             </div>
           )}

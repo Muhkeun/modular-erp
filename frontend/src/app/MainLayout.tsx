@@ -7,7 +7,7 @@ import {
   LayoutGrid, Package, ShoppingCart, Truck, DollarSign, Users,
   ClipboardCheck, Building2, ChevronDown, ChevronRight, LogOut,
   Search, Bell, Menu, X, Settings, Factory, CalendarClock,
-  Shield, Target, Coins, Calculator, Globe, FileCheck2, Sparkles,
+  Shield, Target, Calculator, FileCheck2, Sparkles,
   Command,
 } from "lucide-react";
 import AiChatWidget from "../shared/components/AiChatWidget";

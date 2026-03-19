@@ -222,7 +222,7 @@ export default function PeriodClosePage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="stat-tile">
             <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("common.status")}</span>
-            <span className={statusStyle[selected?.status || ""] || "badge"}>{t("status." + selected?.status, selected?.status)}</span>
+            <span className={statusStyle[selected?.status || ""] || "badge"}>{t("status." + selected?.status, { defaultValue: selected?.status ?? "" })}</span>
           </div>
           <div className="stat-tile">
             <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t("periodClose.fiscalYear")}</span>

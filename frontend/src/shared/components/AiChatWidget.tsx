@@ -5,7 +5,6 @@ import { useMutation } from "@tanstack/react-query";
 import { Bot, Send, X, Maximize2, AlertCircle } from "lucide-react";
 import { clsx } from "clsx";
 import { aiApi } from "../api/aiApi";
-import type { AiChatResponse, AiArtifact } from "../api/aiApi";
 
 interface WidgetMessage {
   id: string;

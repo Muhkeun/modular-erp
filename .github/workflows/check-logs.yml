@@ -1,0 +1,32 @@
+name: Check EC2 Container Logs
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REPOSITORY: modular-erp
+  ECR_REGISTRY: 600627349470.dkr.ecr.ap-northeast-2.amazonaws.com
+
+jobs:
+  check-logs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check container status and logs
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "=== Docker containers ==="
+            docker ps -a
+            echo ""
+            echo "=== Container logs (last 100 lines) ==="
+            docker logs modular-erp --tail 100 2>&1
+            echo ""
+            echo "=== Memory usage ==="
+            free -m
+            echo ""
+            echo "=== Disk usage ==="
+            df -h /

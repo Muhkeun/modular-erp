@@ -15,10 +15,21 @@ interface EmployeeRepository : JpaRepository<Employee, Long> {
         AND (:status IS NULL OR e.status = :status)
         AND (:departmentCode IS NULL OR e.departmentCode = :departmentCode)
         AND (:name IS NULL OR e.name LIKE %:name%)
+        AND (:applyCompanyScope = false OR e.companyCode IN :companyCodes)
+        AND (:applyDepartmentScope = false OR e.departmentCode IN :departmentCodes)
         ORDER BY e.employeeNo
     """)
-    fun search(tenantId: String, status: EmployeeStatus?, departmentCode: String?,
-               name: String?, pageable: Pageable): Page<Employee>
+    fun search(
+        tenantId: String,
+        status: EmployeeStatus?,
+        departmentCode: String?,
+        name: String?,
+        applyCompanyScope: Boolean,
+        companyCodes: Collection<String>,
+        applyDepartmentScope: Boolean,
+        departmentCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<Employee>
 }
 
 interface DepartmentRepository : JpaRepository<Department, Long> {

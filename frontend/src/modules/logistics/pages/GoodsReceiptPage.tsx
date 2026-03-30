@@ -5,45 +5,26 @@ import type { ColDef } from "ag-grid-community";
 import { Plus, ArrowLeft, Save, Trash2, CheckCircle } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
-import api from "../../../shared/api/client";
+import { logisticsApi, type CreateGoodsReceiptRequest, type GoodsReceipt, type GoodsReceiptLineInput } from "../../../shared/api/logisticsApi";
+import { useDataScope } from "../../../shared/hooks/useDataScope";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { filterRowsByDataScope } from "../../../shared/utils/dataScope";
 
 /* ── Types ── */
-interface GrLine {
-  id?: number;
-  itemCode: string;
-  itemName: string;
-  quantity: number;
-  unitOfMeasure: string;
-  unitPrice: number;
-  poLineNo: string;
-  storageLocation: string;
-}
+type GrLine = GoodsReceiptLineInput & { id?: number; poLineNo: string; storageLocation: string };
 
-interface GrHeader {
+interface GrHeader extends Omit<CreateGoodsReceiptRequest, "poDocumentNo" | "remark" | "lines"> {
   id?: number;
   documentNo?: string;
-  companyCode: string;
-  plantCode: string;
-  storageLocation: string;
   vendorCode: string;
   vendorName: string;
   poDocumentNo: string;
-  receiptDate: string;
   remark: string;
   status?: string;
   lines: GrLine[];
 }
 
-interface GrRow {
-  id: number;
-  documentNo: string;
-  vendorName: string;
-  plantCode: string;
-  storageLocation: string;
-  poDocumentNo: string | null;
-  receiptDate: string;
-  status: string;
-}
+type GrRow = GoodsReceipt;
 
 const statusStyle: Record<string, string> = {
   DRAFT: "badge bg-slate-100 text-slate-600",
@@ -77,6 +58,8 @@ const defaultHeader = (): GrHeader => ({
 export default function GoodsReceiptPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const { userId } = useAuth();
+  const dataScope = useDataScope("goods-receipts");
   const [mode, setMode] = useState<"list" | "create" | "detail">("list");
   const [form, setForm] = useState<GrHeader>(defaultHeader());
   const [detail, setDetail] = useState<GrHeader | null>(null);
@@ -84,13 +67,13 @@ export default function GoodsReceiptPage() {
   /* ── Queries ── */
   const { data, isLoading } = useQuery({
     queryKey: ["goods-receipts"],
-    queryFn: async () => (await api.get("/api/v1/logistics/goods-receipts?size=100")).data,
+    queryFn: () => logisticsApi.getGoodsReceipts({ size: 100 }),
     enabled: mode === "list",
   });
 
   /* ── Mutations ── */
   const saveMutation = useMutation({
-    mutationFn: async (payload: GrHeader) => (await api.post("/api/v1/logistics/goods-receipts", payload)).data,
+    mutationFn: (payload: GrHeader) => logisticsApi.createGoodsReceipt(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["goods-receipts"] });
       setMode("list");
@@ -98,7 +81,7 @@ export default function GoodsReceiptPage() {
   });
 
   const confirmMutation = useMutation({
-    mutationFn: async (id: number) => (await api.post(`/api/v1/logistics/goods-receipts/${id}/confirm`)).data,
+    mutationFn: (id: number) => logisticsApi.confirmGoodsReceipt(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["goods-receipts"] });
       setMode("list");
@@ -112,8 +95,16 @@ export default function GoodsReceiptPage() {
   }, []);
 
   const openDetail = useCallback(async (row: GrRow) => {
-    const res = await api.get(`/api/v1/logistics/goods-receipts/${row.id}`);
-    setDetail(res.data.data ?? res.data);
+    const result = await logisticsApi.getGoodsReceipt(row.id);
+    setDetail({
+      ...result,
+      poDocumentNo: result.poDocumentNo ?? "",
+      remark: result.remark ?? "",
+      lines: result.lines.map((line) => ({
+        ...line,
+        poLineNo: line.poLineNo?.toString() ?? "",
+      })),
+    });
     setMode("detail");
   }, []);
 
@@ -180,6 +171,17 @@ export default function GoodsReceiptPage() {
     ],
     [t]
   );
+  const allRows = useMemo<GrRow[]>(() => data?.data ?? [], [data]);
+  const visibleRows = useMemo(
+    () =>
+      filterRowsByDataScope(allRows, dataScope.scope, {
+        userId,
+        getOwnerId: (row) => row.createdBy,
+        getCompanyCode: (row) => row.companyCode,
+        getPlantCode: (row) => row.plantCode,
+      }),
+    [allRows, dataScope.scope, userId]
+  );
 
   /* ── LIST VIEW ── */
   if (mode === "list") {
@@ -197,9 +199,10 @@ export default function GoodsReceiptPage() {
         />
         <div className="card overflow-hidden">
           <DataGrid<GrRow>
-            rowData={data?.data || []}
+            gridId="goods-receipts.list"
+            rowData={visibleRows}
             columnDefs={columnDefs}
-            loading={isLoading}
+            loading={isLoading || dataScope.isLoading}
             onRowClicked={openDetail}
           />
         </div>

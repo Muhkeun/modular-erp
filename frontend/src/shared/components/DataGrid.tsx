@@ -1,13 +1,15 @@
-import { useCallback, useMemo, useRef, type ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { AgGridReact } from "ag-grid-react";
-import type { ColDef, GridReadyEvent } from "ag-grid-community";
+import type { ColDef } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 import EmptyState from "./EmptyState";
+import { useGridPreference } from "../hooks/useGridPreference";
 
 export interface DataGridProps<T> {
   rowData: T[];
   columnDefs: ColDef<T>[];
+  gridId?: string;
   loading?: boolean;
   onRowClicked?: (data: T) => void;
   pagination?: boolean;
@@ -26,6 +28,7 @@ export interface DataGridProps<T> {
 export default function DataGrid<T>({
   rowData,
   columnDefs,
+  gridId,
   loading = false,
   onRowClicked,
   pagination = true,
@@ -38,6 +41,7 @@ export default function DataGrid<T>({
   emptyIcon,
 }: DataGridProps<T>) {
   const gridRef = useRef<AgGridReact<T>>(null);
+  const gridPreference = useGridPreference(gridId ?? "");
 
   const defaultColDef = useMemo<ColDef>(
     () => ({
@@ -48,17 +52,6 @@ export default function DataGrid<T>({
       flex: 1,
     }),
     []
-  );
-
-  const onGridReady = useCallback((_params: GridReadyEvent) => {
-    // Auto-size on ready
-  }, []);
-
-  const handleRowClicked = useCallback(
-    (event: { data: T | undefined }) => {
-      if (event.data && onRowClicked) onRowClicked(event.data);
-    },
-    [onRowClicked]
   );
 
   // Show EmptyState when not loading and no data
@@ -80,8 +73,16 @@ export default function DataGrid<T>({
         rowData={rowData}
         columnDefs={columnDefs}
         defaultColDef={defaultColDef}
-        onGridReady={onGridReady}
-        onRowClicked={handleRowClicked}
+        onGridReady={gridPreference.onGridReady}
+        onColumnMoved={gridPreference.onColumnMoved}
+        onColumnResized={gridPreference.onColumnResized}
+        onColumnVisible={gridPreference.onColumnVisible}
+        onColumnPinned={gridPreference.onColumnPinned}
+        onSortChanged={gridPreference.onSortChanged}
+        onFilterChanged={gridPreference.onFilterChanged}
+        onRowClicked={({ data }) => {
+          if (data && onRowClicked) onRowClicked(data);
+        }}
         pagination={pagination}
         paginationPageSize={pageSize}
         paginationPageSizeSelector={[10, 20, 50, 100]}

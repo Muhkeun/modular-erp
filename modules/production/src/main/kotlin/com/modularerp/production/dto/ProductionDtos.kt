@@ -86,6 +86,7 @@ data class IssueMaterialRequest(
 
 data class WoResponse(
     val id: Long, val documentNo: String, val companyCode: String, val plantCode: String,
+    val createdBy: String?,
     val productCode: String, val productName: String,
     val plannedQuantity: BigDecimal, val completedQuantity: BigDecimal,
     val scrapQuantity: BigDecimal, val remainingQuantity: BigDecimal,
@@ -115,6 +116,7 @@ data class WoMaterialResponse(
 
 fun WorkOrder.toResponse() = WoResponse(
     id = id, documentNo = documentNo, companyCode = companyCode, plantCode = plantCode,
+    createdBy = createdBy,
     productCode = productCode, productName = productName,
     plannedQuantity = plannedQuantity, completedQuantity = completedQuantity,
     scrapQuantity = scrapQuantity, remainingQuantity = remainingQuantity,

@@ -23,6 +23,7 @@ class PeriodCloseTest {
 
     companion object {
         const val TENANT_ID = "PCLOSE_TEST"
+        const val COMPANY = "C100"
         var authToken: String = ""
         var periodId: Long = 0
         var taskId: Long = 0
@@ -59,7 +60,10 @@ class PeriodCloseTest {
     @Test
     @Order(1)
     fun `generate fiscal year`() {
-        val request = mapOf("fiscalYear" to 2026)
+        val request = mapOf(
+            "companyCode" to COMPANY,
+            "fiscalYear" to 2026
+        )
         val response = restTemplate.exchange(
             "/api/v1/period-close/periods/generate", HttpMethod.POST,
             HttpEntity(request, authHeaders()), Map::class.java
@@ -70,6 +74,7 @@ class PeriodCloseTest {
         @Suppress("UNCHECKED_CAST")
         val data = response.body!!["data"] as List<Map<String, Any>>
         assertThat(data).hasSize(12)
+        assertThat(data[0]["companyCode"]).isEqualTo(COMPANY)
         assertThat(data[0]["periodName"]).isEqualTo("2026-01")
         assertThat(data[0]["status"]).isEqualTo("OPEN")
         periodId = (data[0]["id"] as Number).toLong()

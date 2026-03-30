@@ -19,10 +19,19 @@ interface PurchaseRequestRepository : JpaRepository<PurchaseRequest, Long> {
         AND (:status IS NULL OR pr.status = :status)
         AND (:companyCode IS NULL OR pr.companyCode = :companyCode)
         AND (:documentNo IS NULL OR pr.documentNo LIKE %:documentNo%)
+        AND (:applyCompanyScope = false OR pr.companyCode IN :companyCodes)
+        AND (:applyDepartmentScope = false OR pr.departmentCode IN :departmentCodes)
+        AND (:applyPlantScope = false OR pr.plantCode IN :plantCodes)
+        AND (:requestedBy IS NULL OR pr.requestedBy = :requestedBy)
         ORDER BY pr.createdAt DESC
     """)
     fun search(tenantId: String, status: PrStatus?, companyCode: String?,
-               documentNo: String?, pageable: Pageable): Page<PurchaseRequest>
+               documentNo: String?,
+               applyCompanyScope: Boolean, companyCodes: Collection<String>,
+               applyDepartmentScope: Boolean, departmentCodes: Collection<String>,
+               applyPlantScope: Boolean, plantCodes: Collection<String>,
+               requestedBy: String?,
+               pageable: Pageable): Page<PurchaseRequest>
 }
 
 interface PurchaseOrderRepository : JpaRepository<PurchaseOrder, Long> {
@@ -37,10 +46,17 @@ interface PurchaseOrderRepository : JpaRepository<PurchaseOrder, Long> {
         AND (:status IS NULL OR po.status = :status)
         AND (:vendorCode IS NULL OR po.vendorCode = :vendorCode)
         AND (:documentNo IS NULL OR po.documentNo LIKE %:documentNo%)
+        AND (:applyCompanyScope = false OR po.companyCode IN :companyCodes)
+        AND (:applyPlantScope = false OR po.plantCode IN :plantCodes)
+        AND (:createdBy IS NULL OR po.createdBy = :createdBy)
         ORDER BY po.createdAt DESC
     """)
     fun search(tenantId: String, status: PoStatus?, vendorCode: String?,
-               documentNo: String?, pageable: Pageable): Page<PurchaseOrder>
+               documentNo: String?,
+               applyCompanyScope: Boolean, companyCodes: Collection<String>,
+               applyPlantScope: Boolean, plantCodes: Collection<String>,
+               createdBy: String?,
+               pageable: Pageable): Page<PurchaseOrder>
 }
 
 interface RfqRepository : JpaRepository<RequestForQuotation, Long> {

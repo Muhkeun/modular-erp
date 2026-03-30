@@ -1,5 +1,6 @@
 package com.modularerp.asset.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.asset.domain.*
 import com.modularerp.asset.dto.*
 import com.modularerp.asset.repository.*
@@ -24,8 +25,22 @@ class AssetService(
 
     fun getById(id: Long): AssetResponse = findAsset(id).toResponse()
 
-    fun search(status: AssetStatus?, category: AssetCategory?, name: String?, pageable: Pageable): Page<AssetResponse> =
-        assetRepository.search(TenantContext.getTenantId(), status, category, name, pageable).map { it.toResponse() }
+    fun search(
+        status: AssetStatus?,
+        category: AssetCategory?,
+        name: String?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<AssetResponse> =
+        assetRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            status = status,
+            category = category,
+            name = name,
+            applyDepartmentScope = scopeFilter.departmentCodes.isNotEmpty(),
+            departmentCodes = scopeFilter.scopedDepartmentCodes(),
+            pageable = pageable
+        ).map { it.toResponse() }
 
     @Transactional
     fun registerAsset(request: CreateAssetRequest): AssetResponse {
@@ -103,9 +118,9 @@ class AssetService(
      * Run depreciation for all active assets for a given year/month.
      */
     @Transactional
-    fun runDepreciation(year: Int, month: Int): List<DepreciationScheduleResponse> {
+    fun runDepreciation(year: Int, month: Int, scopeFilter: DataScopeSearchFilter): List<DepreciationScheduleResponse> {
         val tenantId = TenantContext.getTenantId()
-        val activeAssets = assetRepository.findAllActive(tenantId)
+        val activeAssets = findActiveAssets(scopeFilter)
         val results = mutableListOf<DepreciationSchedule>()
 
         for (asset in activeAssets) {
@@ -133,8 +148,8 @@ class AssetService(
     fun getDepreciationSchedule(assetId: Long): List<DepreciationScheduleResponse> =
         depreciationRepository.findByAsset(TenantContext.getTenantId(), assetId).map { it.toResponse() }
 
-    fun getAssetSummary(): AssetSummaryResponse {
-        val assets = assetRepository.findAllActive(TenantContext.getTenantId())
+    fun getAssetSummary(scopeFilter: DataScopeSearchFilter): AssetSummaryResponse {
+        val assets = findActiveAssets(scopeFilter)
         val byCategory = assets.groupBy { it.category }
             .mapValues { (_, list) -> list.sumOf { it.bookValue } }
         return AssetSummaryResponse(
@@ -145,6 +160,13 @@ class AssetService(
             byCategory = byCategory
         )
     }
+
+    private fun findActiveAssets(scopeFilter: DataScopeSearchFilter): List<Asset> =
+        assetRepository.findAllActive(
+            tenantId = TenantContext.getTenantId(),
+            applyDepartmentScope = scopeFilter.departmentCodes.isNotEmpty(),
+            departmentCodes = scopeFilter.scopedDepartmentCodes()
+        )
 
     private fun findAsset(id: Long): Asset =
         assetRepository.findByTenantIdAndId(TenantContext.getTenantId(), id)

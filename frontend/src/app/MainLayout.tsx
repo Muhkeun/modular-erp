@@ -1,120 +1,22 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../shared/hooks/useAuth";
 import { useKeyboardShortcuts } from "../shared/hooks/useKeyboardShortcuts";
 import {
-  LayoutGrid, Package, ShoppingCart, Truck, DollarSign, Users,
-  ClipboardCheck, Building2, ChevronDown, ChevronRight, LogOut,
-  Search, Bell, Menu, X, Settings, Factory, CalendarClock,
-  Shield, Target, Calculator, FileCheck2, Sparkles,
+  LayoutGrid, ChevronDown, ChevronRight, LogOut,
+  Search, Bell, Menu, X, Settings,
+  Sparkles,
   Command,
 } from "lucide-react";
 import AiChatWidget from "../shared/components/AiChatWidget";
 import CommandPalette from "../shared/components/CommandPalette";
 import ErrorBoundary from "../shared/components/ErrorBoundary";
 import { clsx } from "clsx";
+import { buildMenuSortMap, buildVisibleMenuCodeSet, navigationItems, type NavigationItem } from "../shared/navigation";
+import { useMenuProfile } from "../shared/hooks/useMenuProfile";
 
-interface NavItem {
-  labelKey: string;
-  icon: React.ReactNode;
-  path?: string;
-  children?: { labelKey: string; path: string }[];
-}
-
-const navigation: NavItem[] = [
-  { labelKey: "nav.dashboard", icon: <LayoutGrid size={20} />, path: "/dashboard" },
-  {
-    labelKey: "nav.masterData", icon: <Package size={20} />,
-    children: [
-      { labelKey: "nav.items", path: "/master-data/items" },
-      { labelKey: "nav.vendors", path: "/master-data/vendors" },
-      { labelKey: "nav.customers", path: "/master-data/customers" },
-      { labelKey: "nav.companies", path: "/master-data/companies" },
-    ],
-  },
-  {
-    labelKey: "nav.procurement", icon: <ShoppingCart size={20} />,
-    children: [
-      { labelKey: "nav.purchaseRequests", path: "/purchase/requests" },
-      { labelKey: "nav.rfq", path: "/purchase/rfq" },
-      { labelKey: "nav.purchaseOrders", path: "/purchase/orders" },
-    ],
-  },
-  {
-    labelKey: "nav.logistics", icon: <Truck size={20} />,
-    children: [
-      { labelKey: "nav.goodsReceipt", path: "/logistics/gr" },
-      { labelKey: "nav.goodsIssue", path: "/logistics/gi" },
-      { labelKey: "nav.stockOverview", path: "/logistics/stock" },
-    ],
-  },
-  {
-    labelKey: "nav.production", icon: <Factory size={20} />,
-    children: [
-      { labelKey: "nav.workOrders", path: "/production/work-orders" },
-      { labelKey: "nav.workCenters", path: "/production/work-centers" },
-      { labelKey: "nav.routings", path: "/production/routings" },
-    ],
-  },
-  {
-    labelKey: "nav.planning", icon: <CalendarClock size={20} />,
-    children: [
-      { labelKey: "nav.mrp", path: "/planning/mrp" },
-      { labelKey: "nav.schedule", path: "/planning/schedule" },
-      { labelKey: "nav.capacity", path: "/planning/capacity" },
-    ],
-  },
-  {
-    labelKey: "nav.sales", icon: <DollarSign size={20} />,
-    children: [
-      { labelKey: "nav.salesOrders", path: "/sales/orders" },
-      { labelKey: "nav.invoices", path: "/sales/invoices" },
-    ],
-  },
-  {
-    labelKey: "nav.finance", icon: <Building2 size={20} />,
-    children: [
-      { labelKey: "nav.journalEntries", path: "/account/journal" },
-      { labelKey: "nav.budget", path: "/finance/budget" },
-      { labelKey: "nav.assets", path: "/finance/assets" },
-      { labelKey: "nav.periodClose", path: "/finance/period-close" },
-      { labelKey: "nav.currency", path: "/finance/currency" },
-    ],
-  },
-  {
-    labelKey: "nav.costing", icon: <Calculator size={20} />,
-    children: [
-      { labelKey: "nav.costingMain", path: "/costing" },
-    ],
-  },
-  {
-    labelKey: "nav.crm", icon: <Target size={20} />,
-    children: [
-      { labelKey: "nav.crmMain", path: "/crm" },
-    ],
-  },
-  { labelKey: "nav.hr", icon: <Users size={20} />, path: "/hr" },
-  { labelKey: "nav.approvals", icon: <FileCheck2 size={20} />, path: "/approvals" },
-  { labelKey: "nav.quality", icon: <ClipboardCheck size={20} />, path: "/quality" },
-  { labelKey: "nav.notifications", icon: <Bell size={20} />, path: "/notifications" },
-  { labelKey: "nav.aiChat", icon: <Sparkles size={20} />, path: "/ai-chat" },
-  {
-    labelKey: "nav.admin", icon: <Shield size={20} />,
-    children: [
-      { labelKey: "nav.roles", path: "/admin/roles" },
-      { labelKey: "nav.systemCodes", path: "/admin/system-codes" },
-      { labelKey: "nav.organizations", path: "/admin/organizations" },
-      { labelKey: "nav.auditLogs", path: "/admin/audit-logs" },
-      { labelKey: "nav.workflows", path: "/admin/workflows" },
-      { labelKey: "nav.tenants", path: "/admin/tenants" },
-      { labelKey: "nav.apiKeys", path: "/admin/api-keys" },
-      { labelKey: "nav.batch", path: "/admin/batch" },
-    ],
-  },
-];
-
-function NavGroup({ item }: { item: NavItem }) {
+function NavGroup({ item }: { item: NavigationItem }) {
   const location = useLocation();
   const { t } = useTranslation();
   const isActive = item.path
@@ -176,14 +78,55 @@ export default function MainLayout() {
   const { name, tenantId, logout } = useAuth();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const menuProfile = useMenuProfile();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
-  const openCommandPalette = useCallback(() => setCommandPaletteOpen(true), []);
+  const openCommandPalette = useCallback(() => {
+    if (!menuProfile.hasResolvedProfile) return;
+    setCommandPaletteOpen(true);
+  }, [menuProfile.hasResolvedProfile]);
 
   useKeyboardShortcuts({
     onSearch: openCommandPalette,
   });
+
+  const filteredNavigation = useMemo(() => {
+    if (!menuProfile.isResolved || !menuProfile.hasResolvedProfile) return [];
+
+    const visibleCodes = buildVisibleMenuCodeSet(menuProfile.visibleMenuCodes);
+    const sortMap = buildMenuSortMap(menuProfile.data?.menuItems ?? []);
+
+    const sortedItems = [...navigationItems]
+      .map((item) => {
+        if (item.path) {
+          return visibleCodes.has(item.code) ? item : null;
+        }
+
+        const visibleChildren = (item.children ?? [])
+          .filter((child) => visibleCodes.has(child.code))
+          .sort((left, right) => (sortMap.get(left.code) ?? Number.MAX_SAFE_INTEGER) - (sortMap.get(right.code) ?? Number.MAX_SAFE_INTEGER));
+
+        if (!visibleChildren.length && !visibleCodes.has(item.code)) {
+          return null;
+        }
+
+        return { ...item, children: visibleChildren };
+      })
+      .filter((item): item is NavigationItem => item !== null)
+      .sort((left, right) => {
+        const leftKey = left.path ? left.code : left.children?.[0]?.code ?? left.code;
+        const rightKey = right.path ? right.code : right.children?.[0]?.code ?? right.code;
+        return (sortMap.get(leftKey) ?? Number.MAX_SAFE_INTEGER) - (sortMap.get(rightKey) ?? Number.MAX_SAFE_INTEGER);
+      });
+
+    return sortedItems;
+  }, [menuProfile.data?.menuItems, menuProfile.hasResolvedProfile, menuProfile.isResolved, menuProfile.visibleMenuCodes]);
+
+  const canAccessMenu = useCallback(
+    (menuCode: string) => menuProfile.isResolved && menuProfile.visibleMenuCodes.includes(menuCode),
+    [menuProfile.isResolved, menuProfile.visibleMenuCodes]
+  );
 
   return (
     <div className="flex h-screen overflow-hidden bg-transparent">
@@ -205,9 +148,20 @@ export default function MainLayout() {
 
         {/* Navigation */}
         <nav data-testid="sidebar-nav" className="flex-1 overflow-y-auto p-3 space-y-1">
-          {navigation.map((item) => (
+          {menuProfile.isLoading && (
+            <div className="px-3 py-4 text-sm text-slate-400">{t("common.loading")}</div>
+          )}
+          {!menuProfile.isLoading && filteredNavigation.map((item) => (
             <NavGroup key={item.labelKey} item={item} />
           ))}
+          {!menuProfile.isLoading && menuProfile.isResolved && filteredNavigation.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-4 text-sm text-slate-500">
+              <p className="font-medium text-slate-700">No Menu Profile</p>
+              <p className="mt-1 text-xs leading-5">
+                Assigned menu profile not found. Navigation is blocked until a visible profile is applied.
+              </p>
+            </div>
+          )}
         </nav>
 
         {/* User */}
@@ -238,7 +192,8 @@ export default function MainLayout() {
             </button>
             <button
               onClick={openCommandPalette}
-              className="hidden items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 md:flex cursor-pointer hover:border-slate-300 transition"
+              disabled={!menuProfile.hasResolvedProfile}
+              className="hidden items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 md:flex cursor-pointer hover:border-slate-300 transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Search size={16} className="text-slate-400" />
               <span className="w-80 text-left text-sm text-slate-400">
@@ -253,13 +208,17 @@ export default function MainLayout() {
             <button data-testid="lang-toggle" onClick={() => { const next = i18n.language === "ko" ? "en" : "ko"; i18n.changeLanguage(next); localStorage.setItem("locale", next); }} className="btn-ghost px-2 text-xs font-bold">
               {i18n.language === "ko" ? "EN" : "KO"}
             </button>
-            <button className="relative rounded-2xl p-2 text-slate-400 transition hover:bg-slate-50 hover:text-slate-600">
+            {canAccessMenu("notifications") && (
+            <button onClick={() => navigate('/notifications')} className="relative rounded-2xl p-2 text-slate-400 transition hover:bg-slate-50 hover:text-slate-600">
               <Bell size={20} />
               <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
             </button>
+            )}
+            {canAccessMenu("ai-chat") && (
             <button onClick={() => navigate('/ai-chat')} className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-50 hover:text-slate-600" title="AI Assistant">
               <Sparkles size={20} />
             </button>
+            )}
             <button onClick={() => navigate('/settings')} className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-50 hover:text-slate-600">
               <Settings size={20} />
             </button>
@@ -276,7 +235,11 @@ export default function MainLayout() {
         </main>
       </div>
       <AiChatWidget />
-      <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
+      <CommandPalette
+        open={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        visibleMenuCodes={menuProfile.visibleMenuCodes}
+      />
     </div>
   );
 }

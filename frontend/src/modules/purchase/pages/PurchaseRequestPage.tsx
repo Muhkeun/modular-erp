@@ -13,6 +13,10 @@ import {
   VENDOR_OPTIONS,
 } from "../../../shared/data/lookups";
 import api, { type ApiResponse } from "../../../shared/api/client";
+import { purchaseApi, type PrType } from "../../../shared/api/purchaseApi";
+import { useDataScope } from "../../../shared/hooks/useDataScope";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { filterRowsByDataScope } from "../../../shared/utils/dataScope";
 
 interface PrLine {
   id?: number;
@@ -31,6 +35,7 @@ interface PrRow {
   documentNo: string;
   companyCode: string;
   plantCode: string;
+  departmentCode: string | null;
   requestDate: string;
   deliveryDate: string | null;
   status: string;
@@ -100,6 +105,8 @@ const emptyForm = (): PrForm => ({
 export default function PurchaseRequestPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { userId } = useAuth();
+  const dataScope = useDataScope("purchase-requests");
 
   const [mode, setMode] = useState<"list" | "create" | "detail">("list");
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -110,12 +117,12 @@ export default function PurchaseRequestPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["purchase-requests"],
-    queryFn: async () => (await api.get("/api/v1/purchase/requests?size=100")).data,
+    queryFn: () => purchaseApi.getRequests({ size: 100 }),
   });
 
   const { data: detailData, isLoading: detailLoading } = useQuery({
     queryKey: ["purchase-request", selectedId],
-    queryFn: async () => (await api.get(`/api/v1/purchase/requests/${selectedId}`)).data,
+    queryFn: () => purchaseApi.getRequest(selectedId!),
     enabled: mode === "detail" && selectedId !== null,
   });
 
@@ -127,10 +134,19 @@ export default function PurchaseRequestPage() {
     },
   });
 
-  const detail: PrRow | undefined = detailData?.data;
+  const detail: PrRow | undefined = detailData
+    ? {
+        ...detailData,
+        lines: detailData.lines?.map((line) => ({
+          ...line,
+          specification: line.specification ?? "",
+          remark: line.remark ?? "",
+        })),
+      }
+    : undefined;
 
   const createMutation = useMutation({
-    mutationFn: (payload: PrForm) => api.post("/api/v1/purchase/requests", payload),
+    mutationFn: (payload: PrForm) => purchaseApi.createRequest({ ...payload, prType: payload.prType as PrType }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-requests"] });
       setMode("list");
@@ -138,7 +154,7 @@ export default function PurchaseRequestPage() {
   });
 
   const submitMutation = useMutation({
-    mutationFn: (id: number) => api.post(`/api/v1/purchase/requests/${id}/submit`),
+    mutationFn: (id: number) => purchaseApi.submitRequest(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-requests"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-request", selectedId] });
@@ -146,7 +162,7 @@ export default function PurchaseRequestPage() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: (id: number) => api.post(`/api/v1/purchase/requests/${id}/approve`),
+    mutationFn: (id: number) => purchaseApi.approveRequest(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-requests"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-request", selectedId] });
@@ -154,7 +170,7 @@ export default function PurchaseRequestPage() {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (id: number) => api.post(`/api/v1/purchase/requests/${id}/reject`),
+    mutationFn: (id: number) => purchaseApi.rejectRequest(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-requests"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-request", selectedId] });
@@ -163,7 +179,7 @@ export default function PurchaseRequestPage() {
 
   const convertToPoMutation = useMutation({
     mutationFn: ({ prId, vendor }: { prId: number; vendor: { vendorCode: string; vendorName: string } }) =>
-      api.post(`/api/v1/purchase/orders/from-pr/${prId}`, vendor),
+      purchaseApi.createOrderFromRequest(prId, vendor),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-requests"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
@@ -173,7 +189,7 @@ export default function PurchaseRequestPage() {
     },
   });
 
-  const itemRows = itemLookupData?.data ?? [];
+  const itemRows = useMemo(() => itemLookupData?.data ?? [], [itemLookupData]);
   const itemOptions = useMemo<SearchOption[]>(
     () =>
       itemRows.map((item) => ({
@@ -203,6 +219,27 @@ export default function PurchaseRequestPage() {
   const filteredPlants = form.companyCode
     ? PLANT_OPTIONS.filter((option) => option.meta === form.companyCode)
     : PLANT_OPTIONS;
+  const allRows = useMemo<PrRow[]>(
+    () =>
+      (data?.data ?? []).map((row) => ({
+        ...row,
+        lines: row.lines?.map((line) => ({
+          ...line,
+          specification: line.specification ?? "",
+          remark: line.remark ?? "",
+        })),
+      })),
+    [data]
+  );
+  const visibleRows = useMemo(() => {
+    return filterRowsByDataScope(allRows, dataScope.scope, {
+      userId,
+      getOwnerId: (row) => row.requestedBy,
+      getCompanyCode: (row) => row.companyCode,
+      getDepartmentCode: (row) => row.departmentCode,
+      getPlantCode: (row) => row.plantCode,
+    });
+  }, [allRows, dataScope.scope, userId]);
   const lineTotal = form.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
   const itemCount = form.lines.filter((line) => line.itemCode).length;
 
@@ -306,9 +343,10 @@ export default function PurchaseRequestPage() {
         />
         <div className="card overflow-hidden">
           <DataGrid<PrRow>
-            rowData={data?.data || []}
+            gridId="purchase-requests.list"
+            rowData={visibleRows}
             columnDefs={columnDefs}
-            loading={isLoading}
+            loading={isLoading || dataScope.isLoading}
             onRowClicked={openDetail}
           />
         </div>

@@ -27,6 +27,7 @@ data class SoLineInput(
 
 data class SoResponse(
     val id: Long, val documentNo: String, val companyCode: String, val plantCode: String,
+    val createdBy: String?,
     val customerCode: String, val customerName: String, val orderDate: LocalDate,
     val deliveryDate: LocalDate?, val status: SoStatus, val currencyCode: String,
     val totalAmount: BigDecimal, val taxAmount: BigDecimal, val grandTotal: BigDecimal,
@@ -43,6 +44,7 @@ data class SoLineResponse(
 
 fun SalesOrder.toResponse() = SoResponse(
     id = id, documentNo = documentNo, companyCode = companyCode, plantCode = plantCode,
+    createdBy = createdBy,
     customerCode = customerCode, customerName = customerName, orderDate = orderDate,
     deliveryDate = deliveryDate, status = status, currencyCode = currencyCode,
     totalAmount = totalAmount, taxAmount = taxAmount, grandTotal = grandTotal,

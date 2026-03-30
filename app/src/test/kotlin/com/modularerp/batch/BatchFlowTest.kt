@@ -23,6 +23,7 @@ class BatchFlowTest {
 
     companion object {
         const val TENANT_ID = "BATCH_TEST"
+        const val COMPANY = "C100"
         var authToken: String = ""
         var jobId: Long = 0
         var executionId: Long = 0
@@ -63,6 +64,7 @@ class BatchFlowTest {
             "jobCode" to "GL_POSTING",
             "jobName" to "General Ledger Posting",
             "jobType" to "GL_POSTING",
+            "companyCode" to COMPANY,
             "cronExpression" to "0 0 2 * * ?",
             "description" to "Nightly GL posting batch"
         )
@@ -75,6 +77,7 @@ class BatchFlowTest {
         assertThat(response.statusCode).isEqualTo(HttpStatus.CREATED)
         val data = extractData(response)
         assertThat(data["jobCode"]).isEqualTo("GL_POSTING")
+        assertThat(data["companyCode"]).isEqualTo(COMPANY)
         assertThat(data["enabled"]).isEqualTo(true)
         jobId = (data["id"] as Number).toLong()
     }
@@ -91,6 +94,7 @@ class BatchFlowTest {
         assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
         val data = extractData(response)
         assertThat(data["status"]).isEqualTo("QUEUED")
+        assertThat(data["companyCode"]).isEqualTo(COMPANY)
         assertThat(data["triggeredBy"]).isEqualTo("USER")
         executionId = (data["id"] as Number).toLong()
     }
@@ -106,6 +110,7 @@ class BatchFlowTest {
         assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
         val data = extractData(response)
         assertThat(data["jobCode"]).isEqualTo("GL_POSTING")
+        assertThat(data["companyCode"]).isEqualTo(COMPANY)
     }
 
     @Test

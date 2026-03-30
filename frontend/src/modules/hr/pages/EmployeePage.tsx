@@ -5,23 +5,10 @@ import type { ColDef } from "ag-grid-community";
 import { Plus, ArrowLeft } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
-import api from "../../../shared/api/client";
+import { hrApi, type CreateEmployeeRequest, type Employee } from "../../../shared/api/hrApi";
 
 /* ── types ─────────────────────────────────────────── */
-interface EmpRow {
-  id: number;
-  employeeNo: string;
-  name: string;
-  companyCode: string;
-  departmentCode: string | null;
-  departmentName: string | null;
-  positionTitle: string | null;
-  jobTitle: string | null;
-  email: string | null;
-  phone: string | null;
-  hireDate: string | null;
-  status: string;
-}
+type EmpRow = Employee;
 
 type Mode = "list" | "create";
 
@@ -46,12 +33,12 @@ export default function EmployeePage() {
   /* queries */
   const { data, isLoading } = useQuery({
     queryKey: ["employees"],
-    queryFn: async () => (await api.get("/api/v1/hr/employees?size=100")).data,
+    queryFn: () => hrApi.getEmployees({ size: 100 }),
   });
 
   /* mutations */
   const createMut = useMutation({
-    mutationFn: async (body: Record<string, unknown>) => (await api.post("/api/v1/hr/employees", body)).data,
+    mutationFn: (body: CreateEmployeeRequest) => hrApi.createEmployee(body),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["employees"] }); setMode("list"); },
   });
 

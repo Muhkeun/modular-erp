@@ -1,5 +1,6 @@
 package com.modularerp.currency.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.core.exception.EntityNotFoundException
 import com.modularerp.currency.domain.*
 import com.modularerp.currency.dto.*
@@ -104,9 +105,20 @@ class CurrencyService(
 
     // ── Revaluation ──
 
-    fun searchRevaluations(status: RevaluationStatus?, fiscalYear: Int?,
-                           pageable: Pageable): Page<RevaluationResponse> =
-        revaluationRepository.search(TenantContext.getTenantId(), status, fiscalYear, pageable)
+    fun searchRevaluations(
+        status: RevaluationStatus?,
+        fiscalYear: Int?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<RevaluationResponse> =
+        revaluationRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            status = status,
+            fiscalYear = fiscalYear,
+            applyCompanyScope = scopeFilter.companyCodes.isNotEmpty(),
+            companyCodes = scopeFilter.scopedCompanyCodes(),
+            pageable = pageable
+        )
             .map { it.toResponse() }
 
     @Transactional
@@ -114,7 +126,7 @@ class CurrencyService(
         val tenantId = TenantContext.getTenantId()
         val docNo = docNumberGenerator.next("REVAL", "REVAL")
         val reval = CurrencyRevaluation(
-            documentNo = docNo, revaluationDate = request.revaluationDate,
+            documentNo = docNo, companyCode = request.companyCode, revaluationDate = request.revaluationDate,
             fiscalYear = request.fiscalYear, period = request.period,
             fromCurrency = request.fromCurrency, toCurrency = request.toCurrency,
             originalRate = request.originalRate, revaluationRate = request.revaluationRate,
@@ -122,6 +134,8 @@ class CurrencyService(
         ).apply { assignTenant(tenantId) }
         return revaluationRepository.save(reval).toResponse()
     }
+
+    fun getRevaluationById(id: Long): RevaluationResponse = findRevaluation(id).toResponse()
 
     @Transactional
     fun postRevaluation(id: Long, userId: String): RevaluationResponse {

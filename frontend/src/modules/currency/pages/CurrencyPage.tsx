@@ -1,113 +1,422 @@
-import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { ColDef } from "ag-grid-community";
-import { Plus, ArrowLeft, ArrowRightLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, Plus, RefreshCw } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
-import api from "../../../shared/api/client";
-
-interface CurrencyRow { id: number; code: string; name: string; symbol: string; decimalPlaces: number; isBaseCurrency: boolean; isActive: boolean; }
-interface RateRow { id: number; fromCurrency: string; toCurrency: string; rate: number; effectiveDate: string; source: string; }
-interface RevaluationRow { id: number; revaluationNo: string; period: string; companyCode: string; status: string; totalGainLoss: number; createdAt: string; }
+import { useToast } from "../../../shared/components/useToast";
+import {
+  currencyApi,
+  type ConvertRequest,
+  type ConvertResponse,
+  type CreateCurrencyRequest,
+  type CreateExchangeRateRequest,
+  type CreateRevaluationRequest,
+  type Currency,
+  type ExchangeRate,
+  type Revaluation,
+} from "../../../shared/api/currencyApi";
 
 type Tab = "currencies" | "rates" | "convert" | "revaluation";
 type Mode = "list" | "create";
 
-const fmt = (v: number) => v?.toLocaleString("ko-KR", { maximumFractionDigits: 4 });
-const fmtCurrency = (v: number) => v?.toLocaleString("ko-KR", { style: "currency", currency: "KRW", maximumFractionDigits: 0 });
+const today = new Date().toISOString().slice(0, 10);
+const currentYear = new Date().getFullYear();
+const currentPeriod = new Date().getMonth() + 1;
+
+const formatNumber = (value: number | string | null | undefined) =>
+  Number(value ?? 0).toLocaleString("ko-KR", { maximumFractionDigits: 4 });
+
+const formatCurrency = (value: number | string | null | undefined, currency = "KRW") =>
+  Number(value ?? 0).toLocaleString("ko-KR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  });
 
 export default function CurrencyPage() {
   const { t } = useTranslation();
-  const qc = useQueryClient();
+  const toast = useToast();
+  const queryClient = useQueryClient();
 
   const [tab, setTab] = useState<Tab>("currencies");
   const [mode, setMode] = useState<Mode>("list");
-  const [convertResult, setConvertResult] = useState<Record<string, unknown> | null>(null);
+  const [convertResult, setConvertResult] = useState<ConvertResponse | null>(null);
 
-  const [currForm, setCurrForm] = useState({ code: "", name: "", symbol: "", decimalPlaces: 2 });
-  const [rateForm, setRateForm] = useState({ fromCurrency: "", toCurrency: "", rate: 0, effectiveDate: "" });
-  const [convertForm, setConvertForm] = useState({ fromCurrency: "USD", toCurrency: "KRW", amount: 0 });
-  const [revalForm, setRevalForm] = useState({ period: "", companyCode: "" });
-
-  const currQ = useQuery({ queryKey: ["currencies"], queryFn: async () => (await api.get("/api/v1/currency/currencies?size=100")).data, enabled: tab === "currencies" });
-  const ratesQ = useQuery({ queryKey: ["exchange-rates"], queryFn: async () => (await api.get("/api/v1/currency/exchange-rates?size=100")).data, enabled: tab === "rates" });
-  const revalQ = useQuery({ queryKey: ["revaluations"], queryFn: async () => (await api.get("/api/v1/currency/revaluations?size=100")).data, enabled: tab === "revaluation" });
-
-  const createCurrMut = useMutation({ mutationFn: async (b: Record<string, unknown>) => (await api.post("/api/v1/currency/currencies", b)).data, onSuccess: () => { qc.invalidateQueries({ queryKey: ["currencies"] }); setMode("list"); } });
-  const createRateMut = useMutation({ mutationFn: async (b: Record<string, unknown>) => (await api.post("/api/v1/currency/exchange-rates", b)).data, onSuccess: () => { qc.invalidateQueries({ queryKey: ["exchange-rates"] }); setMode("list"); } });
-  const convertMut = useMutation({
-    mutationFn: async (b: Record<string, unknown>) => (await api.post("/api/v1/currency/convert", b)).data,
-    onSuccess: (data) => { setConvertResult(data?.data || data); },
+  const [currencyForm, setCurrencyForm] = useState<CreateCurrencyRequest>({
+    currencyCode: "",
+    currencyName: "",
+    symbol: "",
+    decimalPlaces: 2,
+    isBaseCurrency: false,
+    status: "ACTIVE",
   });
-  const revalMut = useMutation({
-    mutationFn: async (b: Record<string, unknown>) => (await api.post("/api/v1/currency/revaluations", b)).data,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["revaluations"] }); },
+  const [rateForm, setRateForm] = useState<CreateExchangeRateRequest>({
+    fromCurrency: "",
+    toCurrency: "",
+    rateDate: today,
+    exchangeRate: 0,
+    rateType: "SPOT",
+    source: "",
+  });
+  const [convertForm, setConvertForm] = useState<ConvertRequest>({
+    fromCurrency: "USD",
+    toCurrency: "KRW",
+    amount: 0,
+    date: today,
+  });
+  const [revaluationForm, setRevaluationForm] = useState<CreateRevaluationRequest>({
+    companyCode: "",
+    revaluationDate: today,
+    fiscalYear: currentYear,
+    period: currentPeriod,
+    fromCurrency: "USD",
+    toCurrency: "KRW",
+    originalRate: 0,
+    revaluationRate: 0,
+    unrealizedGainLoss: 0,
   });
 
-  const currCols = useMemo<ColDef<CurrencyRow>[]>(() => [
-    { field: "code", headerName: t("currency.code"), flex: 0.8, cellRenderer: (p: { value: string }) => <span className="font-mono font-semibold text-brand-700">{p.value}</span> },
-    { field: "name", headerName: t("currency.name"), flex: 1.5 },
-    { field: "symbol", headerName: t("currency.symbol"), flex: 0.5 },
-    { field: "decimalPlaces", headerName: t("currency.decimals"), flex: 0.6 },
-    { field: "isBaseCurrency", headerName: t("currency.baseCurrency"), flex: 0.8,
-      cellRenderer: (p: { value: boolean }) => p.value ? <span className="badge-success">{t("common.yes")}</span> : <span className="text-slate-400">-</span> },
-    { field: "isActive", headerName: t("common.status"), flex: 0.8,
-      cellRenderer: (p: { value: boolean }) => p.value ? <span className="badge-success">{t("common.active")}</span> : <span className="badge bg-slate-100 text-slate-500">{t("common.inactive")}</span> },
-  ], [t]);
+  const currenciesQ = useQuery({
+    queryKey: ["currencies"],
+    queryFn: () => currencyApi.getCurrencies({ size: 100 }),
+    enabled: tab === "currencies",
+  });
 
-  const rateCols = useMemo<ColDef<RateRow>[]>(() => [
-    { field: "fromCurrency", headerName: t("currency.from"), flex: 0.8 },
-    { field: "toCurrency", headerName: t("currency.to"), flex: 0.8 },
-    { field: "rate", headerName: t("currency.rate"), flex: 1.2, type: "numericColumn", valueFormatter: (p: { value: number }) => fmt(p.value) },
-    { field: "effectiveDate", headerName: t("currency.effectiveDate"), flex: 1 },
-    { field: "source", headerName: t("currency.source"), flex: 1 },
-  ], [t]);
+  const ratesQ = useQuery({
+    queryKey: ["exchange-rates"],
+    queryFn: () => currencyApi.getRates({ size: 100 }),
+    enabled: tab === "rates",
+  });
 
-  const revalCols = useMemo<ColDef<RevaluationRow>[]>(() => [
-    { field: "revaluationNo", headerName: t("currency.revalNo"), flex: 1, cellRenderer: (p: { value: string }) => <span className="font-mono font-semibold text-brand-700">{p.value}</span> },
-    { field: "period", headerName: t("currency.period"), flex: 0.8 },
-    { field: "companyCode", headerName: t("nav.companies"), flex: 0.8 },
-    { field: "totalGainLoss", headerName: t("currency.gainLoss"), flex: 1.2, type: "numericColumn",
-      cellRenderer: (p: { value: number }) => <span className={p.value >= 0 ? "text-emerald-600" : "text-red-600 font-semibold"}>{fmtCurrency(p.value)}</span> },
-    { field: "status", headerName: t("common.status"), flex: 0.8, cellRenderer: (p: { value: string }) => <span className="badge-success">{p.value}</span> },
-    { field: "createdAt", headerName: t("common.datetime"), flex: 1.2 },
-  ], [t]);
+  const revaluationsQ = useQuery({
+    queryKey: ["revaluations"],
+    queryFn: () => currencyApi.getRevaluations({ size: 100 }),
+    enabled: tab === "revaluation",
+  });
+
+  const createCurrencyMutation = useMutation({
+    mutationFn: (payload: CreateCurrencyRequest) => currencyApi.createCurrency(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["currencies"] });
+      setMode("list");
+      toast.success(t("common.save", "Saved"));
+    },
+    onError: () => toast.error("Currency creation failed"),
+  });
+
+  const createRateMutation = useMutation({
+    mutationFn: (payload: CreateExchangeRateRequest) => currencyApi.createRate(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
+      setMode("list");
+      toast.success(t("common.save", "Saved"));
+    },
+    onError: () => toast.error("Exchange rate creation failed"),
+  });
+
+  const convertMutation = useMutation({
+    mutationFn: (payload: ConvertRequest) => currencyApi.convert(payload),
+    onSuccess: (data) => setConvertResult(data),
+    onError: () => toast.error("Currency conversion failed"),
+  });
+
+  const revaluationMutation = useMutation({
+    mutationFn: (payload: CreateRevaluationRequest) => currencyApi.runRevaluation(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["revaluations"] });
+      toast.success(t("currency.runRevaluation", "Run Revaluation"));
+    },
+    onError: () => toast.error("Revaluation creation failed"),
+  });
+
+  const currencyColumns = useMemo<ColDef<Currency>[]>(
+    () => [
+      {
+        field: "currencyCode",
+        headerName: t("currency.code"),
+        flex: 0.8,
+        cellRenderer: (params: { value: string }) => (
+          <span className="font-mono font-semibold text-brand-700">{params.value}</span>
+        ),
+      },
+      { field: "currencyName", headerName: t("currency.name"), flex: 1.5 },
+      { field: "symbol", headerName: t("currency.symbol"), flex: 0.5 },
+      { field: "decimalPlaces", headerName: t("currency.decimals"), flex: 0.6 },
+      {
+        field: "isBaseCurrency",
+        headerName: t("currency.baseCurrency"),
+        flex: 0.8,
+        cellRenderer: (params: { value: boolean }) =>
+          params.value ? <span className="badge-success">{t("common.yes")}</span> : <span className="text-slate-400">-</span>,
+      },
+      {
+        field: "status",
+        headerName: t("common.status"),
+        flex: 0.8,
+        cellRenderer: (params: { value: string }) => (
+          <span className={params.value === "ACTIVE" ? "badge-success" : "badge bg-slate-100 text-slate-500"}>
+            {params.value}
+          </span>
+        ),
+      },
+    ],
+    [t]
+  );
+
+  const rateColumns = useMemo<ColDef<ExchangeRate>[]>(
+    () => [
+      { field: "fromCurrency", headerName: t("currency.from"), flex: 0.8 },
+      { field: "toCurrency", headerName: t("currency.to"), flex: 0.8 },
+      {
+        field: "exchangeRate",
+        headerName: t("currency.rate"),
+        flex: 1.2,
+        type: "numericColumn",
+        valueFormatter: (params: { value: number }) => formatNumber(params.value),
+      },
+      { field: "rateDate", headerName: t("currency.effectiveDate"), flex: 1 },
+      { field: "rateType", headerName: t("currency.rateType", "Rate Type"), flex: 0.8 },
+      { field: "source", headerName: t("currency.source"), flex: 1 },
+    ],
+    [t]
+  );
+
+  const revaluationColumns = useMemo<ColDef<Revaluation>[]>(
+    () => [
+      {
+        field: "documentNo",
+        headerName: t("currency.revalNo"),
+        flex: 1,
+        cellRenderer: (params: { value: string }) => (
+          <span className="font-mono font-semibold text-brand-700">{params.value}</span>
+        ),
+      },
+      { field: "companyCode", headerName: t("nav.companies"), flex: 0.8 },
+      { field: "fiscalYear", headerName: t("accounting.fiscalYear", "FY"), flex: 0.7 },
+      { field: "period", headerName: t("currency.period"), flex: 0.7 },
+      {
+        field: "unrealizedGainLoss",
+        headerName: t("currency.gainLoss"),
+        flex: 1.2,
+        type: "numericColumn",
+        cellRenderer: (params: { value: number }) => (
+          <span className={params.value >= 0 ? "text-emerald-600" : "text-red-600 font-semibold"}>
+            {formatCurrency(params.value)}
+          </span>
+        ),
+      },
+      {
+        field: "status",
+        headerName: t("common.status"),
+        flex: 0.8,
+        cellRenderer: (params: { value: string }) => (
+          <span className={params.value === "POSTED" ? "badge-success" : "badge-info"}>{params.value}</span>
+        ),
+      },
+      { field: "postedAt", headerName: t("common.datetime"), flex: 1.2 },
+    ],
+    [t]
+  );
+
+  const openCreate = () => {
+    if (tab === "currencies") {
+      setCurrencyForm({
+        currencyCode: "",
+        currencyName: "",
+        symbol: "",
+        decimalPlaces: 2,
+        isBaseCurrency: false,
+        status: "ACTIVE",
+      });
+    }
+
+    if (tab === "rates") {
+      setRateForm({
+        fromCurrency: "",
+        toCurrency: "",
+        rateDate: today,
+        exchangeRate: 0,
+        rateType: "SPOT",
+        source: "",
+      });
+    }
+
+    setMode("create");
+  };
 
   const handleCreate = () => {
-    if (tab === "currencies") createCurrMut.mutate(currForm);
-    else if (tab === "rates") createRateMut.mutate(rateForm);
+    if (tab === "currencies") {
+      createCurrencyMutation.mutate(currencyForm);
+      return;
+    }
+
+    if (tab === "rates") {
+      createRateMutation.mutate({
+        ...rateForm,
+        source: rateForm.source?.trim() || null,
+      });
+    }
   };
-  const isPending = createCurrMut.isPending || createRateMut.isPending;
+
+  const createPending = createCurrencyMutation.isPending || createRateMutation.isPending;
 
   if (mode === "create") {
     return (
       <div>
-        <PageHeader title={t("common.create")}
+        <PageHeader
+          title={t("common.create")}
           breadcrumbs={[{ label: t("nav.currency") }, { label: t("common.create") }]}
-          actions={<button className="btn-ghost" onClick={() => setMode("list")}><ArrowLeft size={16} /> {t("common.back")}</button>} />
+          actions={
+            <button className="btn-ghost" onClick={() => setMode("list")}>
+              <ArrowLeft size={16} /> {t("common.back")}
+            </button>
+          }
+        />
         <div className="section-card">
           <p className="section-kicker">Currency</p>
           <h3 className="section-title">{t("common.basicInfo")}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            {tab === "currencies" && <>
-              <div><label className="field-label">{t("currency.code")}</label><input className="input" value={currForm.code} onChange={e => setCurrForm(p => ({ ...p, code: e.target.value }))} placeholder="USD" /></div>
-              <div><label className="field-label">{t("currency.name")}</label><input className="input" value={currForm.name} onChange={e => setCurrForm(p => ({ ...p, name: e.target.value }))} /></div>
-              <div><label className="field-label">{t("currency.symbol")}</label><input className="input" value={currForm.symbol} onChange={e => setCurrForm(p => ({ ...p, symbol: e.target.value }))} placeholder="$" /></div>
-              <div><label className="field-label">{t("currency.decimals")}</label><input className="input" type="number" value={currForm.decimalPlaces} onChange={e => setCurrForm(p => ({ ...p, decimalPlaces: +e.target.value }))} /></div>
-            </>}
-            {tab === "rates" && <>
-              <div><label className="field-label">{t("currency.from")}</label><input className="input" value={rateForm.fromCurrency} onChange={e => setRateForm(p => ({ ...p, fromCurrency: e.target.value }))} placeholder="USD" /></div>
-              <div><label className="field-label">{t("currency.to")}</label><input className="input" value={rateForm.toCurrency} onChange={e => setRateForm(p => ({ ...p, toCurrency: e.target.value }))} placeholder="KRW" /></div>
-              <div><label className="field-label">{t("currency.rate")}</label><input className="input" type="number" step="0.0001" value={rateForm.rate} onChange={e => setRateForm(p => ({ ...p, rate: +e.target.value }))} /></div>
-              <div><label className="field-label">{t("currency.effectiveDate")}</label><input className="input" type="date" value={rateForm.effectiveDate} onChange={e => setRateForm(p => ({ ...p, effectiveDate: e.target.value }))} /></div>
-            </>}
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+            {tab === "currencies" && (
+              <>
+                <div>
+                  <label className="field-label">{t("currency.code")}</label>
+                  <input
+                    className="input"
+                    value={currencyForm.currencyCode}
+                    onChange={(event) => setCurrencyForm((prev) => ({ ...prev, currencyCode: event.target.value }))}
+                    placeholder="USD"
+                  />
+                </div>
+                <div>
+                  <label className="field-label">{t("currency.name")}</label>
+                  <input
+                    className="input"
+                    value={currencyForm.currencyName}
+                    onChange={(event) => setCurrencyForm((prev) => ({ ...prev, currencyName: event.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="field-label">{t("currency.symbol")}</label>
+                  <input
+                    className="input"
+                    value={currencyForm.symbol}
+                    onChange={(event) => setCurrencyForm((prev) => ({ ...prev, symbol: event.target.value }))}
+                    placeholder="$"
+                  />
+                </div>
+                <div>
+                  <label className="field-label">{t("currency.decimals")}</label>
+                  <input
+                    className="input"
+                    type="number"
+                    value={currencyForm.decimalPlaces ?? 2}
+                    onChange={(event) =>
+                      setCurrencyForm((prev) => ({ ...prev, decimalPlaces: Number(event.target.value) }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="field-label">{t("currency.baseCurrency")}</label>
+                  <select
+                    className="input"
+                    value={currencyForm.isBaseCurrency ? "Y" : "N"}
+                    onChange={(event) =>
+                      setCurrencyForm((prev) => ({ ...prev, isBaseCurrency: event.target.value === "Y" }))
+                    }
+                  >
+                    <option value="N">{t("common.no")}</option>
+                    <option value="Y">{t("common.yes")}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="field-label">{t("common.status")}</label>
+                  <select
+                    className="input"
+                    value={currencyForm.status}
+                    onChange={(event) => setCurrencyForm((prev) => ({ ...prev, status: event.target.value as "ACTIVE" | "INACTIVE" }))}
+                  >
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                  </select>
+                </div>
+              </>
+            )}
+
+            {tab === "rates" && (
+              <>
+                <div>
+                  <label className="field-label">{t("currency.from")}</label>
+                  <input
+                    className="input"
+                    value={rateForm.fromCurrency}
+                    onChange={(event) => setRateForm((prev) => ({ ...prev, fromCurrency: event.target.value }))}
+                    placeholder="USD"
+                  />
+                </div>
+                <div>
+                  <label className="field-label">{t("currency.to")}</label>
+                  <input
+                    className="input"
+                    value={rateForm.toCurrency}
+                    onChange={(event) => setRateForm((prev) => ({ ...prev, toCurrency: event.target.value }))}
+                    placeholder="KRW"
+                  />
+                </div>
+                <div>
+                  <label className="field-label">{t("currency.rate")}</label>
+                  <input
+                    className="input"
+                    type="number"
+                    step="0.0001"
+                    value={rateForm.exchangeRate}
+                    onChange={(event) =>
+                      setRateForm((prev) => ({ ...prev, exchangeRate: Number(event.target.value) }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="field-label">{t("currency.effectiveDate")}</label>
+                  <input
+                    className="input"
+                    type="date"
+                    value={rateForm.rateDate ?? today}
+                    onChange={(event) => setRateForm((prev) => ({ ...prev, rateDate: event.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="field-label">{t("currency.rateType", "Rate Type")}</label>
+                  <select
+                    className="input"
+                    value={rateForm.rateType}
+                    onChange={(event) =>
+                      setRateForm((prev) => ({ ...prev, rateType: event.target.value as "SPOT" | "AVERAGE" | "CLOSING" }))
+                    }
+                  >
+                    <option value="SPOT">SPOT</option>
+                    <option value="AVERAGE">AVERAGE</option>
+                    <option value="CLOSING">CLOSING</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="field-label">{t("currency.source")}</label>
+                  <input
+                    className="input"
+                    value={rateForm.source ?? ""}
+                    onChange={(event) => setRateForm((prev) => ({ ...prev, source: event.target.value }))}
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
-        <div className="flex justify-end gap-3 mt-6">
-          <button className="btn-ghost" onClick={() => setMode("list")}>{t("common.cancel")}</button>
-          <button className="btn-primary" onClick={handleCreate} disabled={isPending}>
-            {isPending ? t("common.saving") : t("common.save")}
+        <div className="mt-6 flex justify-end gap-3">
+          <button className="btn-ghost" onClick={() => setMode("list")}>
+            {t("common.cancel")}
+          </button>
+          <button className="btn-primary" onClick={handleCreate} disabled={createPending}>
+            {createPending ? t("common.saving") : t("common.save")}
           </button>
         </div>
       </div>
@@ -116,37 +425,50 @@ export default function CurrencyPage() {
 
   return (
     <div>
-      <PageHeader title={t("currency.title")} description={t("currency.description")}
+      <PageHeader
+        title={t("currency.title")}
+        description={t("currency.description")}
         breadcrumbs={[{ label: t("nav.currency") }]}
         actions={
           <div className="flex gap-2">
             {(tab === "currencies" || tab === "rates") && (
-              <button className="btn-primary" onClick={() => setMode("create")}><Plus size={16} /> {t("common.new")}</button>
+              <button className="btn-primary" onClick={openCreate}>
+                <Plus size={16} /> {t("common.new")}
+              </button>
             )}
             {tab === "revaluation" && (
-              <button className="btn-primary" onClick={() => revalMut.mutate(revalForm)} disabled={revalMut.isPending}>
+              <button className="btn-primary" onClick={() => revaluationMutation.mutate(revaluationForm)} disabled={revaluationMutation.isPending}>
                 <RefreshCw size={16} /> {t("currency.runRevaluation")}
               </button>
             )}
           </div>
-        } />
+        }
+      />
 
-      <div className="flex gap-2 mb-4">
-        <button className={tab === "currencies" ? "btn-primary" : "btn-ghost"} onClick={() => setTab("currencies")}>{t("currency.currencies")}</button>
-        <button className={tab === "rates" ? "btn-primary" : "btn-ghost"} onClick={() => setTab("rates")}>{t("currency.exchangeRates")}</button>
-        <button className={tab === "convert" ? "btn-primary" : "btn-ghost"} onClick={() => setTab("convert")}><ArrowRightLeft size={16} /> {t("currency.convert")}</button>
-        <button className={tab === "revaluation" ? "btn-primary" : "btn-ghost"} onClick={() => setTab("revaluation")}>{t("currency.revaluation")}</button>
+      <div className="mb-4 flex gap-2">
+        <button className={tab === "currencies" ? "btn-primary" : "btn-ghost"} onClick={() => setTab("currencies")}>
+          {t("currency.currencies")}
+        </button>
+        <button className={tab === "rates" ? "btn-primary" : "btn-ghost"} onClick={() => setTab("rates")}>
+          {t("currency.exchangeRates")}
+        </button>
+        <button className={tab === "convert" ? "btn-primary" : "btn-ghost"} onClick={() => setTab("convert")}>
+          <ArrowRightLeft size={16} /> {t("currency.convert")}
+        </button>
+        <button className={tab === "revaluation" ? "btn-primary" : "btn-ghost"} onClick={() => setTab("revaluation")}>
+          {t("currency.revaluation")}
+        </button>
       </div>
 
       {tab === "currencies" && (
         <div className="card overflow-hidden">
-          <DataGrid<CurrencyRow> rowData={currQ.data?.data || []} columnDefs={currCols} loading={currQ.isLoading} />
+          <DataGrid<Currency> rowData={currenciesQ.data?.data ?? []} columnDefs={currencyColumns} loading={currenciesQ.isLoading} />
         </div>
       )}
 
       {tab === "rates" && (
         <div className="card overflow-hidden">
-          <DataGrid<RateRow> rowData={ratesQ.data?.data || []} columnDefs={rateCols} loading={ratesQ.isLoading} />
+          <DataGrid<ExchangeRate> rowData={ratesQ.data?.data ?? []} columnDefs={rateColumns} loading={ratesQ.isLoading} />
         </div>
       )}
 
@@ -154,26 +476,55 @@ export default function CurrencyPage() {
         <div className="section-card max-w-lg">
           <p className="section-kicker">Currency Conversion</p>
           <h3 className="section-title">{t("currency.convert")}</h3>
-          <div className="grid grid-cols-1 gap-4 mt-4">
+          <div className="mt-4 grid grid-cols-1 gap-4">
             <div className="grid grid-cols-2 gap-4">
-              <div><label className="field-label">{t("currency.from")}</label><input className="input" value={convertForm.fromCurrency} onChange={e => setConvertForm(p => ({ ...p, fromCurrency: e.target.value }))} /></div>
-              <div><label className="field-label">{t("currency.to")}</label><input className="input" value={convertForm.toCurrency} onChange={e => setConvertForm(p => ({ ...p, toCurrency: e.target.value }))} /></div>
+              <div>
+                <label className="field-label">{t("currency.from")}</label>
+                <input
+                  className="input"
+                  value={convertForm.fromCurrency}
+                  onChange={(event) => setConvertForm((prev) => ({ ...prev, fromCurrency: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="field-label">{t("currency.to")}</label>
+                <input
+                  className="input"
+                  value={convertForm.toCurrency}
+                  onChange={(event) => setConvertForm((prev) => ({ ...prev, toCurrency: event.target.value }))}
+                />
+              </div>
             </div>
-            <div><label className="field-label">{t("currency.amount")}</label><input className="input" type="number" value={convertForm.amount} onChange={e => setConvertForm(p => ({ ...p, amount: +e.target.value }))} /></div>
-            <button className="btn-primary" onClick={() => convertMut.mutate(convertForm)} disabled={convertMut.isPending}>
-              {convertMut.isPending ? t("common.loading") : t("currency.convert")}
+            <div>
+              <label className="field-label">{t("currency.amount")}</label>
+              <input
+                className="input"
+                type="number"
+                value={convertForm.amount}
+                onChange={(event) => setConvertForm((prev) => ({ ...prev, amount: Number(event.target.value) }))}
+              />
+            </div>
+            <div>
+              <label className="field-label">{t("common.date", "Date")}</label>
+              <input
+                className="input"
+                type="date"
+                value={convertForm.date ?? today}
+                onChange={(event) => setConvertForm((prev) => ({ ...prev, date: event.target.value }))}
+              />
+            </div>
+            <button className="btn-primary" onClick={() => convertMutation.mutate(convertForm)} disabled={convertMutation.isPending}>
+              {convertMutation.isPending ? t("common.loading") : t("currency.convert")}
             </button>
             {convertResult && (
               <div className="rounded-[22px] bg-slate-50 p-4">
                 <div className="text-xs uppercase tracking-wider text-slate-400">Result</div>
                 <div className="mt-2 text-2xl font-bold text-slate-900">
-                  {convertResult.convertedAmount !== undefined
-                    ? `${convertForm.toCurrency} ${Number(convertResult.convertedAmount).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}`
-                    : JSON.stringify(convertResult)}
+                  {convertResult.toCurrency} {Number(convertResult.toAmount).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}
                 </div>
-                {convertResult.rate !== undefined && (
-                  <div className="mt-1 text-sm text-slate-500">Rate: {fmt(Number(convertResult.rate))}</div>
-                )}
+                <div className="mt-1 text-sm text-slate-500">
+                  Rate: {formatNumber(convertResult.exchangeRate)} @ {convertResult.rateDate}
+                </div>
               </div>
             )}
           </div>
@@ -184,13 +535,99 @@ export default function CurrencyPage() {
         <div>
           <div className="section-card mb-4">
             <p className="section-kicker">Revaluation Parameters</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div><label className="field-label">{t("currency.period")}</label><input className="input" placeholder="2024-01" value={revalForm.period} onChange={e => setRevalForm(p => ({ ...p, period: e.target.value }))} /></div>
-              <div><label className="field-label">{t("nav.companies")}</label><input className="input" value={revalForm.companyCode} onChange={e => setRevalForm(p => ({ ...p, companyCode: e.target.value }))} /></div>
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div>
+                <label className="field-label">{t("nav.companies")}</label>
+                <input
+                  className="input"
+                  value={revaluationForm.companyCode}
+                  onChange={(event) => setRevaluationForm((prev) => ({ ...prev, companyCode: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="field-label">{t("accounting.fiscalYear", "FY")}</label>
+                <input
+                  className="input"
+                  type="number"
+                  value={revaluationForm.fiscalYear}
+                  onChange={(event) => setRevaluationForm((prev) => ({ ...prev, fiscalYear: Number(event.target.value) }))}
+                />
+              </div>
+              <div>
+                <label className="field-label">{t("currency.period")}</label>
+                <input
+                  className="input"
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={revaluationForm.period}
+                  onChange={(event) => setRevaluationForm((prev) => ({ ...prev, period: Number(event.target.value) }))}
+                />
+              </div>
+              <div>
+                <label className="field-label">{t("currency.from")}</label>
+                <input
+                  className="input"
+                  value={revaluationForm.fromCurrency}
+                  onChange={(event) => setRevaluationForm((prev) => ({ ...prev, fromCurrency: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="field-label">{t("currency.to")}</label>
+                <input
+                  className="input"
+                  value={revaluationForm.toCurrency}
+                  onChange={(event) => setRevaluationForm((prev) => ({ ...prev, toCurrency: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="field-label">{t("common.date", "Date")}</label>
+                <input
+                  className="input"
+                  type="date"
+                  value={revaluationForm.revaluationDate ?? today}
+                  onChange={(event) => setRevaluationForm((prev) => ({ ...prev, revaluationDate: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="field-label">{t("currency.originalRate", "Original Rate")}</label>
+                <input
+                  className="input"
+                  type="number"
+                  step="0.0001"
+                  value={revaluationForm.originalRate}
+                  onChange={(event) => setRevaluationForm((prev) => ({ ...prev, originalRate: Number(event.target.value) }))}
+                />
+              </div>
+              <div>
+                <label className="field-label">{t("currency.revaluationRate", "Revaluation Rate")}</label>
+                <input
+                  className="input"
+                  type="number"
+                  step="0.0001"
+                  value={revaluationForm.revaluationRate}
+                  onChange={(event) => setRevaluationForm((prev) => ({ ...prev, revaluationRate: Number(event.target.value) }))}
+                />
+              </div>
+              <div>
+                <label className="field-label">{t("currency.gainLoss")}</label>
+                <input
+                  className="input"
+                  type="number"
+                  value={revaluationForm.unrealizedGainLoss}
+                  onChange={(event) =>
+                    setRevaluationForm((prev) => ({ ...prev, unrealizedGainLoss: Number(event.target.value) }))
+                  }
+                />
+              </div>
             </div>
           </div>
           <div className="card overflow-hidden">
-            <DataGrid<RevaluationRow> rowData={revalQ.data?.data || []} columnDefs={revalCols} loading={revalQ.isLoading} />
+            <DataGrid<Revaluation>
+              rowData={revaluationsQ.data?.data ?? []}
+              columnDefs={revaluationColumns}
+              loading={revaluationsQ.isLoading}
+            />
           </div>
         </div>
       )}

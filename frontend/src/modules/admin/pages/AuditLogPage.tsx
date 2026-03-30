@@ -1,43 +1,38 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { auditLogApi, type AuditLog, type AuditAction } from '../../../shared/api/adminApi';
 import PageHeader from '../../../shared/components/PageHeader';
 import DataGrid from '../../../shared/components/DataGrid';
-import type { ColDef } from 'ag-grid-community';
+import type { ColDef, ValueFormatterParams } from 'ag-grid-community';
 
 const AUDIT_ACTIONS: AuditAction[] = ['CREATE', 'READ', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'EXPORT', 'IMPORT', 'APPROVE', 'REJECT'];
 
 export default function AuditLogPage() {
   const { t } = useTranslation();
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filterAction, setFilterAction] = useState<AuditAction | ''>('');
   const [filterEntityType, setFilterEntityType] = useState('');
 
-  const loadLogs = async () => {
-    setLoading(true);
-    try {
+  const { data: logs = [], isLoading: loading } = useQuery({
+    queryKey: ['admin', 'audit-logs', filterAction, filterEntityType],
+    queryFn: async () => {
       const result = await auditLogApi.search({
         action: filterAction || undefined,
         entityType: filterEntityType || undefined,
         size: 100,
       });
-      setLogs(result.data);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { loadLogs(); }, [filterAction, filterEntityType]);
+      return result.data;
+    },
+  });
 
   const columnDefs: ColDef<AuditLog>[] = [
     { field: 'createdAt', headerName: t('common.datetime', '일시'), width: 180,
-      valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleString() : '' },
+      valueFormatter: ({ value }: ValueFormatterParams<AuditLog, string>) => value ? new Date(value).toLocaleString() : '' },
     { field: 'userId', headerName: t('common.user', '사용자'), width: 120 },
     { field: 'action', headerName: t('admin.action', '액션'), width: 100,
-      cellStyle: (p: any) => {
+      cellStyle: ({ value }) => {
         const colors: Record<string, string> = { CREATE: '#16a34a', UPDATE: '#2563eb', DELETE: '#dc2626' };
-        return { color: colors[p.value] ?? '#64748b', fontWeight: 600 };
+        return { color: colors[String(value)] ?? '#64748b', fontWeight: 600 };
       },
     },
     { field: 'entityType', headerName: t('admin.entityType', '대상 유형'), width: 150 },

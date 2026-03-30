@@ -1,12 +1,13 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Save, ArrowLeft, Trash2, Languages, Package, Ruler, ShieldCheck, Plus } from "lucide-react";
 import PageHeader from "../../../shared/components/PageHeader";
 import SearchSelect, { type SearchOption } from "../../../shared/components/SearchSelect";
 import { ITEM_GROUP_OPTIONS, LOCALE_OPTIONS, UNIT_OPTIONS } from "../../../shared/data/lookups";
 import api from "../../../shared/api/client";
+import { useFieldPermission } from "../../../shared/hooks/useFieldPermission";
 
 interface ItemForm {
   code: string;
@@ -48,43 +49,58 @@ const ITEM_TYPE_DESCRIPTIONS: Record<(typeof ITEM_TYPES)[number], string> = {
   ASSET: "설비, 금형, 비품 등 자산성 품목",
 };
 
+function toItemForm(data: {
+  code: string;
+  itemType: string;
+  itemGroup?: string | null;
+  unitOfMeasure: string;
+  specification?: string | null;
+  weight?: number | null;
+  volume?: number | null;
+  makerName?: string | null;
+  makerItemNo?: string | null;
+  qualityInspectionRequired: boolean;
+  phantomBom: boolean;
+  translations?: ItemForm["translations"];
+}): ItemForm {
+  return {
+    code: data.code,
+    itemType: data.itemType,
+    itemGroup: data.itemGroup || "",
+    unitOfMeasure: data.unitOfMeasure,
+    specification: data.specification || "",
+    weight: data.weight?.toString() || "",
+    volume: data.volume?.toString() || "",
+    makerName: data.makerName || "",
+    makerItemNo: data.makerItemNo || "",
+    qualityInspectionRequired: data.qualityInspectionRequired,
+    phantomBom: data.phantomBom,
+    translations: data.translations?.length
+      ? data.translations
+      : [{ locale: "ko", name: "", description: "" }],
+  };
+}
+
 export default function ItemFormPage() {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
-  const [form, setForm] = useState<ItemForm>(defaultForm);
+  const [draftForm, setDraftForm] = useState<ItemForm | null>(null);
+  const fieldPermission = useFieldPermission("items");
 
   const { data } = useQuery({
     queryKey: ["item", id],
     queryFn: async () => {
       const res = await api.get(`/api/v1/master-data/items/${id}`);
-      return res.data.data;
+      return toItemForm(res.data.data);
     },
     enabled: isEdit,
   });
 
-  useEffect(() => {
-    if (data) {
-      setForm({
-        code: data.code,
-        itemType: data.itemType,
-        itemGroup: data.itemGroup || "",
-        unitOfMeasure: data.unitOfMeasure,
-        specification: data.specification || "",
-        weight: data.weight?.toString() || "",
-        volume: data.volume?.toString() || "",
-        makerName: data.makerName || "",
-        makerItemNo: data.makerItemNo || "",
-        qualityInspectionRequired: data.qualityInspectionRequired,
-        phantomBom: data.phantomBom,
-        translations: data.translations?.length
-          ? data.translations
-          : [{ locale: "ko", name: "", description: "" }],
-      });
-    }
-  }, [data]);
+  // Preserve the fetched record as the base snapshot and only fork local draft state after edits begin.
+  const form = draftForm ?? data ?? defaultForm;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -116,18 +132,42 @@ export default function ItemFormPage() {
   );
 
   const set = (field: keyof ItemForm, value: unknown) =>
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setDraftForm((prev) => ({ ...(prev ?? form), [field]: value }));
+
+  const getDisplayValue = (fieldName: string, value: string | number | null | undefined) => {
+    if (!fieldPermission.isVisible(fieldName)) return "-";
+    if (fieldPermission.isMasked(fieldName)) return "••••••";
+    return value ?? "";
+  };
+
+  const isEditableField = (fieldName: string) =>
+    !fieldPermission.isReadonly(fieldName) && !fieldPermission.isMasked(fieldName);
+
+  // Save stays disabled when the current user can only inspect the visible item fields.
+  const canEditItem = [
+    "code",
+    "itemType",
+    "itemGroup",
+    "unitOfMeasure",
+    "specification",
+    "weight",
+    "volume",
+    "makerName",
+    "makerItemNo",
+    "qualityInspectionRequired",
+    "phantomBom",
+  ].some((fieldName) => fieldPermission.isVisible(fieldName) && isEditableField(fieldName));
 
   const setTranslation = (index: number, field: string, value: string) => {
     const updated = [...form.translations];
     updated[index] = { ...updated[index], [field]: value };
-    setForm((prev) => ({ ...prev, translations: updated }));
+    setDraftForm((prev) => ({ ...(prev ?? form), translations: updated }));
   };
 
   const removeTranslation = (index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      translations: prev.translations.filter((_, translationIndex) => translationIndex !== index),
+    setDraftForm((prev) => ({
+      ...(prev ?? form),
+      translations: (prev ?? form).translations.filter((_, translationIndex) => translationIndex !== index),
     }));
   };
 
@@ -151,7 +191,7 @@ export default function ItemFormPage() {
                 <Trash2 size={16} /> {t("common.delete")}
               </button>
             )}
-            <button className="btn-primary" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <button className="btn-primary" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !canEditItem}>
               <Save size={16} /> {saveMutation.isPending ? t("common.saving") : t("common.save")}
             </button>
           </>
@@ -174,12 +214,12 @@ export default function ItemFormPage() {
                 <div className="stat-tile">
                   <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Type</div>
                   <div className="mt-2 text-sm font-semibold text-slate-900">
-                    {itemTypeOptions.find((option) => option.value === form.itemType)?.label ?? "-"}
+                    {getDisplayValue("itemType", itemTypeOptions.find((option) => option.value === form.itemType)?.label ?? "-")}
                   </div>
                 </div>
                 <div className="stat-tile">
                   <div className="text-xs uppercase tracking-[0.18em] text-slate-400">UoM</div>
-                  <div className="mt-2 text-sm font-semibold text-slate-900">{form.unitOfMeasure || "-"}</div>
+                  <div className="mt-2 text-sm font-semibold text-slate-900">{getDisplayValue("unitOfMeasure", form.unitOfMeasure || "-")}</div>
                 </div>
                 <div className="stat-tile">
                   <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Locales</div>
@@ -193,16 +233,19 @@ export default function ItemFormPage() {
             <p className="section-kicker">Item Identity</p>
             <h3 className="section-title">{t("item.basicInfo")}</h3>
             <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
+              {fieldPermission.isVisible("code") && (
               <div className="space-y-2">
                 <label className="field-label">{t("item.code")} *</label>
                 <input
                   className="input font-mono"
-                  value={form.code}
-                  disabled={isEdit}
+                  value={String(getDisplayValue("code", form.code))}
+                  disabled={isEdit || !isEditableField("code")}
                   onChange={(e) => set("code", e.target.value)}
                   placeholder="ITEM-001"
                 />
               </div>
+              )}
+              {fieldPermission.isVisible("itemType") && (
               <SearchSelect
                 label={`${t("item.type")} *`}
                 value={form.itemType}
@@ -210,8 +253,11 @@ export default function ItemFormPage() {
                 placeholder="품목유형 검색"
                 searchTitle="품목유형 선택"
                 searchDescription="운영 목적과 재고/원가 처리 기준에 맞는 유형을 선택합니다."
+                disabled={!isEditableField("itemType")}
                 onSelect={(option) => set("itemType", option.value)}
               />
+              )}
+              {fieldPermission.isVisible("itemGroup") && (
               <SearchSelect
                 label={t("item.group")}
                 value={form.itemGroup}
@@ -219,26 +265,34 @@ export default function ItemFormPage() {
                 placeholder="품목그룹 검색"
                 searchTitle="품목그룹 선택"
                 searchDescription="분류 체계에 맞는 그룹을 검색해 선택합니다."
+                disabled={!isEditableField("itemGroup")}
                 onSelect={(option) => set("itemGroup", option.value)}
-                onClear={() => set("itemGroup", "")}
+                onClear={isEditableField("itemGroup") ? () => set("itemGroup", "") : undefined}
               />
+              )}
+              {fieldPermission.isVisible("unitOfMeasure") && (
               <SearchSelect
                 label={t("item.uom")}
                 value={form.unitOfMeasure}
                 options={UNIT_OPTIONS}
                 placeholder="단위 검색"
                 searchTitle="단위 선택"
+                disabled={!isEditableField("unitOfMeasure")}
                 onSelect={(option) => set("unitOfMeasure", option.value)}
               />
+              )}
+              {fieldPermission.isVisible("specification") && (
               <div className="space-y-2 md:col-span-2">
                 <label className="field-label">{t("item.spec")}</label>
                 <textarea
                   className="input min-h-[116px] resize-none"
-                  value={form.specification}
+                  value={String(getDisplayValue("specification", form.specification))}
+                  disabled={!isEditableField("specification")}
                   onChange={(e) => set("specification", e.target.value)}
                   placeholder="재질, 규격, 색상, 치수 등 검색 결과에 함께 노출할 정보를 입력"
                 />
               </div>
+              )}
             </div>
           </section>
 
@@ -246,38 +300,54 @@ export default function ItemFormPage() {
             <p className="section-kicker">Operational Properties</p>
             <h3 className="section-title">{t("item.properties")}</h3>
             <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
+              {fieldPermission.isVisible("weight") && (
               <div className="space-y-2">
                 <label className="field-label">{t("item.weight")}</label>
                 <input
                   className="input"
                   type="number"
                   step="0.01"
-                  value={form.weight}
+                  value={String(getDisplayValue("weight", form.weight))}
+                  disabled={!isEditableField("weight")}
                   onChange={(e) => set("weight", e.target.value)}
                 />
               </div>
+              )}
+              {fieldPermission.isVisible("volume") && (
               <div className="space-y-2">
                 <label className="field-label">{t("item.volume")}</label>
                 <input
                   className="input"
                   type="number"
                   step="0.01"
-                  value={form.volume}
+                  value={String(getDisplayValue("volume", form.volume))}
+                  disabled={!isEditableField("volume")}
                   onChange={(e) => set("volume", e.target.value)}
                 />
               </div>
+              )}
+              {fieldPermission.isVisible("makerName") && (
               <div className="space-y-2">
                 <label className="field-label">{t("item.maker")}</label>
-                <input className="input" value={form.makerName} onChange={(e) => set("makerName", e.target.value)} />
+                <input
+                  className="input"
+                  value={String(getDisplayValue("makerName", form.makerName))}
+                  disabled={!isEditableField("makerName")}
+                  onChange={(e) => set("makerName", e.target.value)}
+                />
               </div>
+              )}
+              {fieldPermission.isVisible("makerItemNo") && (
               <div className="space-y-2">
                 <label className="field-label">{t("item.makerItemNo")}</label>
                 <input
                   className="input"
-                  value={form.makerItemNo}
+                  value={String(getDisplayValue("makerItemNo", form.makerItemNo))}
+                  disabled={!isEditableField("makerItemNo")}
                   onChange={(e) => set("makerItemNo", e.target.value)}
                 />
               </div>
+              )}
             </div>
           </section>
 
@@ -290,10 +360,10 @@ export default function ItemFormPage() {
               <button
                 className="btn-secondary"
                 onClick={() =>
-                  setForm({
-                    ...form,
-                    translations: [...form.translations, { locale: "en", name: "", description: "" }],
-                  })
+                  setDraftForm((prev) => ({
+                    ...(prev ?? form),
+                    translations: [...(prev ?? form).translations, { locale: "en", name: "", description: "" }],
+                  }))
                 }
               >
                 <Plus size={16} /> {t("item.addTranslation")}
@@ -362,7 +432,7 @@ export default function ItemFormPage() {
                   <div>
                     <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Code / Group</div>
                     <div className="mt-1 text-sm font-semibold text-slate-900">
-                      {form.code || "미입력"} / {form.itemGroup || "미선택"}
+                      {getDisplayValue("code", form.code || "미입력")} / {getDisplayValue("itemGroup", form.itemGroup || "미선택")}
                     </div>
                   </div>
                 </div>
@@ -373,7 +443,7 @@ export default function ItemFormPage() {
                   <div>
                     <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Unit / Weight</div>
                     <div className="mt-1 text-sm font-semibold text-slate-900">
-                      {form.unitOfMeasure || "-"} / {form.weight || "-"} kg
+                      {getDisplayValue("unitOfMeasure", form.unitOfMeasure || "-")} / {getDisplayValue("weight", form.weight || "-")} kg
                     </div>
                   </div>
                 </div>
@@ -397,35 +467,41 @@ export default function ItemFormPage() {
                 <div className="mt-4 space-y-2 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">{t("item.qiRequired")}</span>
-                    <span>{form.qualityInspectionRequired ? t("common.yes") : t("common.no")}</span>
+                    <span>{fieldPermission.isMasked("qualityInspectionRequired") ? "••••••" : form.qualityInspectionRequired ? t("common.yes") : t("common.no")}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">{t("item.phantomBom")}</span>
-                    <span>{form.phantomBom ? t("common.yes") : t("common.no")}</span>
+                    <span>{fieldPermission.isMasked("phantomBom") ? "••••••" : form.phantomBom ? t("common.yes") : t("common.no")}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="mt-5 space-y-3">
+              {fieldPermission.isVisible("qualityInspectionRequired") && (
               <label className="flex items-center gap-3 rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-3">
                 <input
                   type="checkbox"
                   className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                   checked={form.qualityInspectionRequired}
+                  disabled={!isEditableField("qualityInspectionRequired")}
                   onChange={(e) => set("qualityInspectionRequired", e.target.checked)}
                 />
                 <span className="text-sm text-slate-700">{t("item.qiRequired")}</span>
               </label>
+              )}
+              {fieldPermission.isVisible("phantomBom") && (
               <label className="flex items-center gap-3 rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-3">
                 <input
                   type="checkbox"
                   className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                   checked={form.phantomBom}
+                  disabled={!isEditableField("phantomBom")}
                   onChange={(e) => set("phantomBom", e.target.checked)}
                 />
                 <span className="text-sm text-slate-700">{t("item.phantomBom")}</span>
               </label>
+              )}
             </div>
           </div>
         </aside>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import axios from "axios";
 import {
   ArrowLeft,
   Play,
@@ -14,7 +15,16 @@ import {
   X,
 } from "lucide-react";
 import PageHeader from "../../../shared/components/PageHeader";
-import api from "../../../shared/api/client";
+import {
+  productionApi,
+  type IssueMaterialRequest,
+  type ReportProductionRequest,
+  type WorkOrder,
+} from "../../../shared/api/productionApi";
+import AccessDenied from "../../../shared/components/AccessDenied";
+import { useDataScope } from "../../../shared/hooks/useDataScope";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { canAccessRowByDataScope } from "../../../shared/utils/dataScope";
 
 const statusColors: Record<string, string> = {
   PLANNED: "bg-slate-100 text-slate-700",
@@ -30,32 +40,34 @@ export default function WorkOrderDetailPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { userId } = useAuth();
+  const dataScope = useDataScope("work-orders");
 
   const [showReport, setShowReport] = useState(false);
   const [reportForm, setReportForm] = useState({ goodQuantity: 0, scrapQuantity: 0, operationNo: 1 });
   const [issueForm, setIssueForm] = useState<{ itemCode: string; quantity: number } | null>(null);
 
-  const { data } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["work-order", id],
-    queryFn: async () => (await api.get(`/api/v1/production/work-orders/${id}`)).data.data,
+    queryFn: () => productionApi.getWorkOrder(Number(id)),
     enabled: !!id,
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["work-order", id] });
 
   const releaseMutation = useMutation({
-    mutationFn: async () => (await api.post(`/api/v1/production/work-orders/${id}/release`)).data,
+    mutationFn: () => productionApi.releaseWorkOrder(Number(id)),
     onSuccess: invalidate,
   });
 
   const startMutation = useMutation({
-    mutationFn: async () => (await api.post(`/api/v1/production/work-orders/${id}/start`)).data,
+    mutationFn: () => productionApi.startWorkOrder(Number(id)),
     onSuccess: invalidate,
   });
 
   const reportMutation = useMutation({
-    mutationFn: async (payload: { goodQuantity: number; scrapQuantity: number; operationNo: number }) =>
-      (await api.post(`/api/v1/production/work-orders/${id}/report`, payload)).data,
+    mutationFn: (payload: ReportProductionRequest) =>
+      productionApi.reportWorkOrder(Number(id), payload),
     onSuccess: () => {
       invalidate();
       setShowReport(false);
@@ -64,32 +76,64 @@ export default function WorkOrderDetailPage() {
   });
 
   const completeMutation = useMutation({
-    mutationFn: async () => (await api.post(`/api/v1/production/work-orders/${id}/complete`)).data,
+    mutationFn: () => productionApi.completeWorkOrder(Number(id)),
     onSuccess: invalidate,
   });
 
   const closeMutation = useMutation({
-    mutationFn: async () => (await api.post(`/api/v1/production/work-orders/${id}/close`)).data,
+    mutationFn: () => productionApi.closeWorkOrder(Number(id)),
     onSuccess: invalidate,
   });
 
   const issueMaterialMutation = useMutation({
-    mutationFn: async (payload: { itemCode: string; quantity: number }) =>
-      (await api.post(`/api/v1/production/work-orders/${id}/issue-material`, payload)).data,
+    mutationFn: (payload: IssueMaterialRequest) =>
+      productionApi.issueMaterial(Number(id), payload),
     onSuccess: () => {
       invalidate();
       setIssueForm(null);
     },
   });
 
-  if (!data)
+  if (axios.isAxiosError(error) && error.response?.status === 403) {
+    return (
+      <AccessDenied
+        title={t("common.accessDenied", "Access Denied")}
+        description={t(
+          "common.dataScopeDenied",
+          "The current data scope does not allow access to this record."
+        )}
+      />
+    );
+  }
+
+  if (isLoading || dataScope.isLoading || !data)
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" />
       </div>
     );
 
-  const wo = data;
+  if (
+    !canAccessRowByDataScope(data, dataScope.scope, {
+      userId,
+      getOwnerId: (row) => row.createdBy,
+      getCompanyCode: (row) => row.companyCode,
+      getPlantCode: (row) => row.plantCode,
+    })
+  ) {
+    // Re-check the record against the same data scope used by the list view so deep links stay fail-closed.
+    return (
+      <AccessDenied
+        title={t("common.accessDenied", "Access Denied")}
+        description={t(
+          "common.dataScopeDenied",
+          "The current data scope does not allow access to this record."
+        )}
+      />
+    );
+  }
+
+  const wo: WorkOrder = data;
   const progressPct =
     wo.plannedQuantity > 0 ? Math.min(100, (wo.completedQuantity / wo.plannedQuantity) * 100) : 0;
 
@@ -191,7 +235,7 @@ export default function WorkOrderDetailPage() {
             {(!wo.operations || wo.operations.length === 0) ? (
               <p className="py-8 text-sm text-slate-400 text-center">{t("common.noData")}</p>
             ) : (
-              wo.operations.map((op: any) => {
+              wo.operations.map((op) => {
                 const opProgress =
                   wo.plannedQuantity > 0
                     ? Math.min(100, (op.completedQuantity / wo.plannedQuantity) * 100)
@@ -248,7 +292,7 @@ export default function WorkOrderDetailPage() {
             {(!wo.materials || wo.materials.length === 0) ? (
               <p className="py-8 text-sm text-slate-400 text-center">{t("common.noData")}</p>
             ) : (
-              wo.materials.map((mat: any) => {
+              wo.materials.map((mat) => {
                 const matProgress =
                   mat.requiredQuantity > 0
                     ? Math.min(100, (mat.issuedQuantity / mat.requiredQuantity) * 100)

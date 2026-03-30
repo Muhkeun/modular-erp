@@ -10,11 +10,13 @@ import java.time.LocalDateTime
 // --- Fiscal Period DTOs ---
 
 data class GenerateFiscalYearRequest(
+    @field:NotBlank val companyCode: String,
     @field:NotNull val fiscalYear: Int
 )
 
 data class FiscalPeriodResponse(
     val id: Long,
+    val companyCode: String?,
     val fiscalYear: Int,
     val period: Int,
     val periodName: String,
@@ -26,7 +28,7 @@ data class FiscalPeriodResponse(
 )
 
 fun FiscalPeriod.toResponse() = FiscalPeriodResponse(
-    id = id, fiscalYear = fiscalYear, period = period, periodName = periodName,
+    id = id, companyCode = companyCode, fiscalYear = fiscalYear, period = period, periodName = periodName,
     startDate = startDate, endDate = endDate, status = status,
     closedBy = closedBy, closedAt = closedAt
 )
@@ -68,6 +70,7 @@ data class CreateClosingEntryRequest(
 data class ClosingEntryResponse(
     val id: Long,
     val fiscalPeriodId: Long,
+    val companyCode: String?,
     val documentNo: String,
     val entryType: ClosingEntryType,
     val description: String,
@@ -79,7 +82,7 @@ data class ClosingEntryResponse(
 )
 
 fun ClosingEntry.toResponse() = ClosingEntryResponse(
-    id = id, fiscalPeriodId = fiscalPeriod.id, documentNo = documentNo,
+    id = id, fiscalPeriodId = fiscalPeriod.id, companyCode = fiscalPeriod.companyCode, documentNo = documentNo,
     entryType = entryType, description = description,
     debitAccount = debitAccount, creditAccount = creditAccount,
     amount = amount, posted = posted, reversalDate = reversalDate

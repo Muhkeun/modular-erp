@@ -20,10 +20,13 @@ import java.time.LocalDate
  * - 세금 계산: 품목 단가 × 수량 × 세율(기본 10%)
  */
 @Entity
-@Table(name = "sales_orders")
+@Table(
+    name = "sales_orders",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["tenant_id", "document_no"])]
+)
 class SalesOrder(
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, length = 30)
     var documentNo: String = "",
 
     @Column(nullable = false, length = 20)

@@ -5,7 +5,7 @@ import type { ColDef } from "ag-grid-community";
 import { Plus, ArrowLeft, ArrowUpRight, Users, Target, Activity } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
-import api from "../../../shared/api/client";
+import { crmApi } from "../../../shared/api/crmApi";
 
 interface CustomerRow { id: number; name: string; email: string | null; phone: string | null; company: string | null; segment: string; status: string; totalRevenue: number; }
 interface LeadRow { id: number; name: string; email: string | null; phone: string | null; company: string | null; source: string; status: string; score: number; assignedTo: string | null; createdAt: string; }
@@ -46,35 +46,35 @@ export default function CrmPage() {
   const [actForm, setActForm] = useState({ type: "CALL", subject: "", relatedTo: "", relatedName: "", dueDate: "" });
 
   // Queries
-  const customersQ = useQuery({ queryKey: ["crm-customers"], queryFn: async () => (await api.get("/api/v1/crm/customers?size=100")).data, enabled: tab === "customers" });
-  const leadsQ = useQuery({ queryKey: ["crm-leads"], queryFn: async () => (await api.get("/api/v1/crm/leads?size=100")).data, enabled: tab === "leads" });
-  const oppsQ = useQuery({ queryKey: ["crm-opportunities"], queryFn: async () => (await api.get("/api/v1/crm/opportunities?size=100")).data, enabled: tab === "opportunities" });
-  const actsQ = useQuery({ queryKey: ["crm-activities"], queryFn: async () => (await api.get("/api/v1/crm/activities?size=100")).data, enabled: tab === "activities" });
-  const pipelineQ = useQuery({ queryKey: ["crm-pipeline"], queryFn: async () => (await api.get("/api/v1/crm/pipeline/summary")).data });
+  const customersQ = useQuery({ queryKey: ["crm-customers"], queryFn: async () => (await crmApi.getCustomers()).data, enabled: tab === "customers" });
+  const leadsQ = useQuery({ queryKey: ["crm-leads"], queryFn: async () => (await crmApi.getLeads()).data, enabled: tab === "leads" });
+  const oppsQ = useQuery({ queryKey: ["crm-opportunities"], queryFn: async () => (await crmApi.getOpportunities()).data, enabled: tab === "opportunities" });
+  const actsQ = useQuery({ queryKey: ["crm-activities"], queryFn: async () => (await crmApi.getActivities()).data, enabled: tab === "activities" });
+  const pipelineQ = useQuery({ queryKey: ["crm-pipeline"], queryFn: async () => (await crmApi.getPipelineSummary()).data });
 
   // Mutations
   const createCustomerMut = useMutation({
-    mutationFn: async (b: Record<string, unknown>) => (await api.post("/api/v1/crm/customers", b)).data,
+    mutationFn: async (b: Record<string, unknown>) => (await crmApi.createCustomer(b)).data,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm-customers"] }); setMode("list"); },
   });
   const createLeadMut = useMutation({
-    mutationFn: async (b: Record<string, unknown>) => (await api.post("/api/v1/crm/leads", b)).data,
+    mutationFn: async (b: Record<string, unknown>) => (await crmApi.createLead(b)).data,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm-leads"] }); setMode("list"); },
   });
   const convertLeadMut = useMutation({
-    mutationFn: async (id: number) => (await api.post(`/api/v1/crm/leads/${id}/convert`)).data,
+    mutationFn: async (id: number) => (await crmApi.convertLead(id)).data,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm-leads"] }); qc.invalidateQueries({ queryKey: ["crm-customers"] }); },
   });
   const createOppMut = useMutation({
-    mutationFn: async (b: Record<string, unknown>) => (await api.post("/api/v1/crm/opportunities", b)).data,
+    mutationFn: async (b: Record<string, unknown>) => (await crmApi.createOpportunity(b)).data,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm-opportunities"] }); setMode("list"); },
   });
   const updateStageMut = useMutation({
-    mutationFn: async ({ id, stage }: { id: number; stage: string }) => (await api.post(`/api/v1/crm/opportunities/${id}/stage`, { stage })).data,
+    mutationFn: async ({ id, stage }: { id: number; stage: string }) => (await crmApi.updateStage(id, stage)).data,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm-opportunities"] }); qc.invalidateQueries({ queryKey: ["crm-pipeline"] }); setStageDialog(null); },
   });
   const createActMut = useMutation({
-    mutationFn: async (b: Record<string, unknown>) => (await api.post("/api/v1/crm/activities", b)).data,
+    mutationFn: async (b: Record<string, unknown>) => (await crmApi.createActivity(b)).data,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm-activities"] }); setMode("list"); },
   });
 

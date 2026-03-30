@@ -9,6 +9,9 @@ import java.time.LocalDateTime
 @Table(name = "fiscal_periods")
 class FiscalPeriod(
 
+    @Column(length = 20)
+    var companyCode: String? = null,
+
     @Column(nullable = false)
     var fiscalYear: Int,
 

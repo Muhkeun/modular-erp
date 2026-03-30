@@ -15,13 +15,29 @@ interface AssetRepository : JpaRepository<Asset, Long> {
         AND (:status IS NULL OR a.status = :status)
         AND (:category IS NULL OR a.category = :category)
         AND (:name IS NULL OR a.name LIKE %:name%)
+        AND (:applyDepartmentScope = false OR a.department IN :departmentCodes)
         ORDER BY a.assetNo ASC
     """)
-    fun search(tenantId: String, status: AssetStatus?, category: AssetCategory?,
-               name: String?, pageable: Pageable): Page<Asset>
+    fun search(
+        tenantId: String,
+        status: AssetStatus?,
+        category: AssetCategory?,
+        name: String?,
+        applyDepartmentScope: Boolean,
+        departmentCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<Asset>
 
-    @Query("SELECT a FROM Asset a WHERE a.tenantId = :tenantId AND a.status = 'ACTIVE' AND a.active = true")
-    fun findAllActive(tenantId: String): List<Asset>
+    @Query("""
+        SELECT a FROM Asset a WHERE a.tenantId = :tenantId AND a.status = 'ACTIVE' AND a.active = true
+        AND (:applyDepartmentScope = false OR a.department IN :departmentCodes)
+        ORDER BY a.assetNo ASC
+    """)
+    fun findAllActive(
+        tenantId: String,
+        applyDepartmentScope: Boolean,
+        departmentCodes: Collection<String>
+    ): List<Asset>
 }
 
 interface DepreciationScheduleRepository : JpaRepository<DepreciationSchedule, Long> {

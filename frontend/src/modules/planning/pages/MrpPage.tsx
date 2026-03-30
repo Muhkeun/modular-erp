@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Play, ShoppingCart, Factory } from "lucide-react";
 import PageHeader from "../../../shared/components/PageHeader";
-import api from "../../../shared/api/client";
+import { planningApi, type MrpActionType } from "../../../shared/api/planningApi";
 
 const actionIcon: Record<string, React.ReactNode> = {
   PURCHASE: <ShoppingCart size={16} className="text-blue-600" />,
@@ -19,12 +19,11 @@ export default function MrpPage() {
 
   const { data: recentRuns } = useQuery({
     queryKey: ["mrp-runs"],
-    queryFn: async () => (await api.get("/api/v1/planning/mrp?size=5")).data,
+    queryFn: () => planningApi.listMrpRuns({ size: 5 }),
   });
 
   const runMrp = useMutation({
-    mutationFn: async () =>
-      (await api.post("/api/v1/planning/mrp/run", { plantCode, planningHorizonDays: horizon })).data,
+    mutationFn: () => planningApi.runMrp({ plantCode, planningHorizonDays: horizon }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mrp-runs"] }),
   });
 
@@ -85,7 +84,7 @@ export default function MrpPage() {
           <p className="section-kicker">History</p>
           <h3 className="section-title">{t("mrp.latestResults")}</h3>
           <div className="divide-y divide-slate-50 mt-4">
-            {recentRuns.data.map((run: any) => (
+            {recentRuns.data.map((run) => (
               <div key={run.id} className="py-3 flex items-center justify-between text-sm">
                 <div>
                   <span className="font-mono font-semibold text-brand-700">#{run.id}</span>
@@ -137,7 +136,7 @@ export default function MrpPage() {
                 <span className="text-center">{t("mrp.action")}</span>
                 <span>{t("mrp.requiredBy")}</span>
               </div>
-              {latestRun.results.map((r: any) => (
+              {latestRun.results.map((r) => (
                 <div key={r.id} className="grid-table-row">
                   <span>
                     <p className="font-medium text-slate-900">{r.itemName}</p>
@@ -157,7 +156,7 @@ export default function MrpPage() {
                   </span>
                   <span className="text-center">
                     <span className="inline-flex items-center gap-1.5">
-                      {actionIcon[r.actionType]}
+                      {actionIcon[r.actionType as MrpActionType]}
                       <span className="text-xs">
                         {String(t("mrp.actionTypes." + r.actionType, r.actionType))}
                       </span>

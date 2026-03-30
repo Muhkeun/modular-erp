@@ -1,5 +1,6 @@
 package com.modularerp.purchase.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.core.event.DomainEvent
 import com.modularerp.core.event.DomainEventPublisher
 import com.modularerp.core.exception.EntityNotFoundException
@@ -43,9 +44,30 @@ class PurchaseOrderService(
         return findPo(id).toResponse()
     }
 
-    fun search(status: PoStatus?, vendorCode: String?, documentNo: String?, pageable: Pageable): Page<PoResponse> {
+    fun search(
+        status: PoStatus?,
+        vendorCode: String?,
+        documentNo: String?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<PoResponse> {
         val tenantId = TenantContext.getTenantId()
-        return poRepository.search(tenantId, status, vendorCode, documentNo, pageable).map { it.toResponse() }
+        if (!scopeFilter.isSupportedBy(supportsOwn = true, supportsCompany = true, supportsDepartment = false, supportsPlant = true)) {
+            return Page.empty(pageable)
+        }
+
+        return poRepository.search(
+            tenantId = tenantId,
+            status = status,
+            vendorCode = vendorCode,
+            documentNo = documentNo,
+            applyCompanyScope = scopeFilter.companyCodes.isNotEmpty(),
+            companyCodes = scopeFilter.scopedCompanyCodes(),
+            applyPlantScope = scopeFilter.plantCodes.isNotEmpty(),
+            plantCodes = scopeFilter.scopedPlantCodes(),
+            createdBy = scopeFilter.ownUserId,
+            pageable = pageable
+        ).map { it.toResponse() }
     }
 
     @Transactional
@@ -149,10 +171,10 @@ class PurchaseOrderService(
 
     /** PO 품목에 연결된 PR 행의 미전환 잔량을 차감하여 이중 발주를 방지 */
     private fun consumePrQuantities(tenantId: String, po: PurchaseOrder) {
-        po.lines.filter { it.prDocumentNo != null }.groupBy { it.prDocumentNo!! }.forEach { (prDocNo, poLines) ->
-            val pr = prRepository.findByTenantIdAndDocumentNo(tenantId, prDocNo).orElse(null) ?: return@forEach
-            poLines.forEach { poLine ->
-                val prLine = pr.lines.find { it.lineNo == poLine.prLineNo } ?: return@forEach
+        po.lines.filter { it.prDocumentNo != null }.groupBy { it.prDocumentNo!! }.forEach documentLoop@{ (prDocNo, poLines) ->
+            val pr = prRepository.findByTenantIdAndDocumentNo(tenantId, prDocNo).orElse(null) ?: return@documentLoop
+            poLines.forEach lineLoop@{ poLine ->
+                val prLine = pr.lines.find { it.lineNo == poLine.prLineNo } ?: return@lineLoop
                 prLine.consumeQuantity(poLine.quantity)
             }
             prRepository.save(pr)

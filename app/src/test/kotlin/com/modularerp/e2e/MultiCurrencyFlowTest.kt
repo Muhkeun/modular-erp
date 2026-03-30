@@ -217,6 +217,7 @@ class MultiCurrencyFlowTest {
         println("=== Multi-Currency E2E: Step 6 - Create revaluation ===")
         // Unrealized loss: $25,000 * (1400 - 1350) = 1,250,000 KRW loss
         val revalReq = mapOf(
+            "companyCode" to COMPANY,
             "fiscalYear" to 2025,
             "period" to 1,
             "fromCurrency" to "USD",
@@ -233,6 +234,7 @@ class MultiCurrencyFlowTest {
         assertThat(resp.statusCode).isEqualTo(HttpStatus.CREATED)
         val data = extractData(resp)
         revalId = (data["id"] as Number).toLong()
+        assertThat(data["companyCode"]).isEqualTo(COMPANY)
         assertThat(data["status"]).isEqualTo("DRAFT")
         val gainLoss = BigDecimal(data["unrealizedGainLoss"].toString())
         assertThat(gainLoss.compareTo(BigDecimal(-1250000))).isEqualTo(0)

@@ -69,9 +69,6 @@ function SearchModal({
   useEffect(() => {
     if (!open) return;
 
-    setQuery(initialQuery);
-    setActiveIndex(0);
-
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
@@ -83,10 +80,6 @@ function SearchModal({
   }, [initialQuery, onClose, open]);
 
   const filtered = useMemo(() => filterOptions(options, query).slice(0, 24), [options, query]);
-
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
 
   if (!open) return null;
 
@@ -126,7 +119,10 @@ function SearchModal({
             className="lookup-input"
             placeholder="코드, 이름, 설명으로 검색"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setActiveIndex(0);
+            }}
             onKeyDown={(event) => {
               if (event.key === "ArrowDown") {
                 event.preventDefault();
@@ -199,14 +195,12 @@ export default function SearchSelect({
   const inputId = useId();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const selectedOption = options.find((option) => option.value === value);
-  const [query, setQuery] = useState(selectedOption?.label ?? value ?? "");
+  const selectedLabel = selectedOption?.label ?? value ?? "";
+  const [query, setQuery] = useState(selectedLabel);
   const [activeIndex, setActiveIndex] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-
-  useEffect(() => {
-    setQuery(selectedOption?.label ?? value ?? "");
-  }, [selectedOption, value]);
+  const [modalSeed, setModalSeed] = useState(0);
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -220,10 +214,6 @@ export default function SearchSelect({
   }, []);
 
   const filtered = useMemo(() => filterOptions(options, query).slice(0, 8), [options, query]);
-
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
 
   const commitSelection = (option: SearchOption) => {
     onSelect(option);
@@ -243,12 +233,17 @@ export default function SearchSelect({
           <input
             id={inputId}
             className="lookup-input"
-            value={query}
+            value={menuOpen ? query : selectedLabel}
             placeholder={placeholder}
             disabled={disabled}
-            onFocus={() => setMenuOpen(true)}
+            onFocus={() => {
+              setQuery(selectedLabel);
+              setActiveIndex(0);
+              setMenuOpen(true);
+            }}
             onChange={(event) => {
               setQuery(event.target.value);
+              setActiveIndex(0);
               setMenuOpen(true);
             }}
             onKeyDown={(event) => {
@@ -270,7 +265,6 @@ export default function SearchSelect({
 
               if (event.key === "Escape") {
                 setMenuOpen(false);
-                setQuery(selectedOption?.label ?? value ?? "");
               }
             }}
           />
@@ -290,7 +284,11 @@ export default function SearchSelect({
           <button
             type="button"
             className="lookup-icon-button"
-            onClick={() => setModalOpen(true)}
+            onClick={() => {
+              setQuery(selectedLabel);
+              setModalSeed((current) => current + 1);
+              setModalOpen(true);
+            }}
             disabled={disabled}
             aria-label={`${label} search modal`}
           >
@@ -332,11 +330,12 @@ export default function SearchSelect({
       </div>
 
       <SearchModal
+        key={modalSeed}
         open={modalOpen}
         title={searchTitle ?? label}
         description={searchDescription}
         options={options}
-        initialQuery={query}
+        initialQuery={selectedLabel}
         emptyText={emptyText}
         onClose={() => setModalOpen(false)}
         onSelect={commitSelection}

@@ -9,6 +9,14 @@ import { clsx } from "clsx";
 import { aiApi } from "../../../shared/api/aiApi";
 import type { AiMessage, AiConversation, AiChatResponse, AiArtifact } from "../../../shared/api/aiApi";
 
+function createMessageId(prefix: "assistant" | "error" | "user"): string {
+  return `${prefix}-${crypto.randomUUID()}`;
+}
+
+function createTimestamp(): string {
+  return new Date().toISOString();
+}
+
 function formatRelativeTime(dateStr: string): string {
   const now = Date.now();
   const diff = now - new Date(dateStr).getTime();
@@ -147,10 +155,10 @@ export default function AiChatPage() {
         setMessages((prev) => [
           ...prev,
           {
-            id: `assistant-${Date.now()}`,
+            id: createMessageId("assistant"),
             role: "ASSISTANT",
             content: data.message,
-            createdAt: new Date().toISOString(),
+            createdAt: createTimestamp(),
             artifacts: data.artifacts,
             queryResult: data.queryResult,
           },
@@ -162,10 +170,10 @@ export default function AiChatPage() {
       setMessages((prev) => [
         ...prev,
         {
-          id: `error-${Date.now()}`,
+          id: createMessageId("error"),
           role: "ASSISTANT",
           content: t("ai.errorMessage"),
-          createdAt: new Date().toISOString(),
+          createdAt: createTimestamp(),
         },
       ]);
     },
@@ -214,10 +222,10 @@ export default function AiChatPage() {
     if (!trimmed || chatMutation.isPending) return;
 
     const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
+      id: createMessageId("user"),
       role: "USER",
       content: trimmed,
-      createdAt: new Date().toISOString(),
+      createdAt: createTimestamp(),
     };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");

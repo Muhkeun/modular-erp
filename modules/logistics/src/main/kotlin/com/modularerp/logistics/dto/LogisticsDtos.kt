@@ -28,6 +28,7 @@ data class GrLineInput(
 
 data class GrResponse(
     val id: Long, val documentNo: String, val companyCode: String, val plantCode: String,
+    val createdBy: String?,
     val storageLocation: String, val poDocumentNo: String?, val vendorCode: String, val vendorName: String,
     val receiptDate: LocalDate, val status: GrStatus, val remark: String?,
     val lines: List<GrLineResponse>
@@ -41,6 +42,7 @@ data class GrLineResponse(
 
 fun GoodsReceipt.toResponse() = GrResponse(
     id = id, documentNo = documentNo, companyCode = companyCode, plantCode = plantCode,
+    createdBy = createdBy,
     storageLocation = storageLocation, poDocumentNo = poDocumentNo, vendorCode = vendorCode,
     vendorName = vendorName, receiptDate = receiptDate, status = status, remark = remark,
     lines = lines.map { GrLineResponse(it.id, it.lineNo, it.itemCode, it.itemName, it.quantity, it.unitOfMeasure, it.unitPrice, it.totalPrice, it.storageLocation, it.poLineNo) }
@@ -66,6 +68,7 @@ data class GiLineInput(
 
 data class GiResponse(
     val id: Long, val documentNo: String, val companyCode: String, val plantCode: String,
+    val createdBy: String?,
     val storageLocation: String, val issueType: GiType, val referenceDocNo: String?,
     val issueDate: LocalDate, val status: GiStatus, val remark: String?,
     val lines: List<GiLineResponse>
@@ -78,6 +81,7 @@ data class GiLineResponse(
 
 fun GoodsIssue.toResponse() = GiResponse(
     id = id, documentNo = documentNo, companyCode = companyCode, plantCode = plantCode,
+    createdBy = createdBy,
     storageLocation = storageLocation, issueType = issueType, referenceDocNo = referenceDocNo,
     issueDate = issueDate, status = status, remark = remark,
     lines = lines.map { GiLineResponse(it.id, it.lineNo, it.itemCode, it.itemName, it.quantity, it.unitOfMeasure, it.storageLocation) }

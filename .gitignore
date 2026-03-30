@@ -16,3 +16,4 @@ frontend/.env.local
 # Secrets
 *.env
 *.local
+.gradle-user-home/

@@ -11,8 +11,17 @@ import java.util.Optional
 interface MrpRunRepository : JpaRepository<MrpRun, Long> {
     fun findByTenantIdAndId(tenantId: String, id: Long): Optional<MrpRun>
 
-    @Query("SELECT m FROM MrpRun m WHERE m.tenantId = :tenantId AND m.active = true ORDER BY m.createdAt DESC")
-    fun findRecent(tenantId: String, pageable: Pageable): Page<MrpRun>
+    @Query("""
+        SELECT m FROM MrpRun m WHERE m.tenantId = :tenantId AND m.active = true
+        AND (:applyPlantScope = false OR m.plantCode IN :plantCodes)
+        ORDER BY m.createdAt DESC
+    """)
+    fun findRecent(
+        tenantId: String,
+        applyPlantScope: Boolean,
+        plantCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<MrpRun>
 }
 
 interface ProductionScheduleRepository : JpaRepository<ProductionSchedule, Long> {

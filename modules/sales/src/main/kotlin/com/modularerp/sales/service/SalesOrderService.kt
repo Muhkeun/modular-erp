@@ -1,5 +1,6 @@
 package com.modularerp.sales.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.core.exception.EntityNotFoundException
 import com.modularerp.document.service.DocumentNumberGenerator
 import com.modularerp.sales.domain.*
@@ -20,8 +21,30 @@ class SalesOrderService(
 
     fun getById(id: Long): SoResponse = findSo(id).toResponse()
 
-    fun search(status: SoStatus?, customerCode: String?, documentNo: String?, pageable: Pageable): Page<SoResponse> =
-        soRepository.search(TenantContext.getTenantId(), status, customerCode, documentNo, pageable).map { it.toResponse() }
+    fun search(
+        status: SoStatus?,
+        customerCode: String?,
+        documentNo: String?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<SoResponse> {
+        if (!scopeFilter.isSupportedBy(supportsOwn = true, supportsCompany = true, supportsDepartment = false, supportsPlant = true)) {
+            return Page.empty(pageable)
+        }
+
+        return soRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            status = status,
+            customerCode = customerCode,
+            documentNo = documentNo,
+            applyCompanyScope = scopeFilter.companyCodes.isNotEmpty(),
+            companyCodes = scopeFilter.scopedCompanyCodes(),
+            applyPlantScope = scopeFilter.plantCodes.isNotEmpty(),
+            plantCodes = scopeFilter.scopedPlantCodes(),
+            createdBy = scopeFilter.ownUserId,
+            pageable = pageable
+        ).map { it.toResponse() }
+    }
 
     @Transactional
     fun create(request: CreateSoRequest): SoResponse {

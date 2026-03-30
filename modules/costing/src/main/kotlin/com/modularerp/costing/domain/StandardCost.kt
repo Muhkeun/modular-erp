@@ -12,6 +12,9 @@ class StandardCost(
     @Column(nullable = false, length = 50)
     var itemCode: String = "",
 
+    @Column(length = 30)
+    var costCenterCode: String? = null,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var costType: CostType = CostType.MATERIAL,

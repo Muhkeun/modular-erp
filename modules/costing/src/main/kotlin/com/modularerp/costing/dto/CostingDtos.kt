@@ -33,6 +33,7 @@ fun CostCenter.toResponse() = CostCenterResponse(
 
 data class CreateStandardCostRequest(
     @field:NotBlank val itemCode: String,
+    val costCenterCode: String? = null,
     val costType: CostType = CostType.MATERIAL,
     val standardRate: BigDecimal = BigDecimal.ZERO,
     val effectiveFrom: LocalDate = LocalDate.now(),
@@ -42,13 +43,13 @@ data class CreateStandardCostRequest(
 )
 
 data class StandardCostResponse(
-    val id: Long, val itemCode: String, val costType: CostType,
+    val id: Long, val itemCode: String, val costCenterCode: String?, val costType: CostType,
     val standardRate: BigDecimal, val effectiveFrom: LocalDate, val effectiveTo: LocalDate?,
     val currency: String, val notes: String?
 )
 
 fun StandardCost.toResponse() = StandardCostResponse(
-    id = id, itemCode = itemCode, costType = costType, standardRate = standardRate,
+    id = id, itemCode = itemCode, costCenterCode = costCenterCode, costType = costType, standardRate = standardRate,
     effectiveFrom = effectiveFrom, effectiveTo = effectiveTo,
     currency = currency, notes = notes
 )
@@ -88,20 +89,21 @@ fun CostAllocation.toResponse() = CostAllocationResponse(
 
 data class CalculateProductCostRequest(
     @field:NotBlank val itemCode: String,
+    val costCenterCode: String? = null,
     val fiscalYear: Int,
     val period: Int,
     val quantity: BigDecimal = BigDecimal.ONE
 )
 
 data class ProductCostResponse(
-    val id: Long, val itemCode: String, val fiscalYear: Int, val period: Int,
+    val id: Long, val itemCode: String, val costCenterCode: String?, val fiscalYear: Int, val period: Int,
     val materialCost: BigDecimal, val laborCost: BigDecimal, val overheadCost: BigDecimal,
     val totalCost: BigDecimal, val unitCost: BigDecimal, val quantity: BigDecimal,
     val currency: String, val calculated: Boolean, val calculatedAt: LocalDateTime?
 )
 
 fun ProductCost.toResponse() = ProductCostResponse(
-    id = id, itemCode = itemCode, fiscalYear = fiscalYear, period = period,
+    id = id, itemCode = itemCode, costCenterCode = costCenterCode, fiscalYear = fiscalYear, period = period,
     materialCost = materialCost, laborCost = laborCost, overheadCost = overheadCost,
     totalCost = totalCost, unitCost = unitCost, quantity = quantity,
     currency = currency, calculated = calculated, calculatedAt = calculatedAt

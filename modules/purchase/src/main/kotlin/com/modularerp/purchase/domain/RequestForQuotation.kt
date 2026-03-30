@@ -20,10 +20,13 @@ import java.time.LocalDateTime
  * - PR 행과 연결하여 요청 원본 추적 가능
  */
 @Entity
-@Table(name = "rfqs")
+@Table(
+    name = "rfqs",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["tenant_id", "document_no"])]
+)
 class RequestForQuotation(
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, length = 30)
     var documentNo: String = "",
 
     @Column(nullable = false, length = 20)

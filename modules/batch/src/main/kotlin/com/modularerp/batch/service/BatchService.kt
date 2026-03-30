@@ -1,8 +1,18 @@
 package com.modularerp.batch.service
 
-import com.modularerp.batch.domain.*
-import com.modularerp.batch.dto.*
-import com.modularerp.batch.repository.*
+import com.modularerp.admin.dto.DataScopeSearchFilter
+import com.modularerp.batch.domain.BatchExecution
+import com.modularerp.batch.domain.BatchJob
+import com.modularerp.batch.domain.BatchJobType
+import com.modularerp.batch.domain.ExecutionStatus
+import com.modularerp.batch.dto.BatchExecutionResponse
+import com.modularerp.batch.dto.BatchJobResponse
+import com.modularerp.batch.dto.CreateBatchJobRequest
+import com.modularerp.batch.dto.ExecuteJobRequest
+import com.modularerp.batch.dto.UpdateBatchJobRequest
+import com.modularerp.batch.dto.toResponse
+import com.modularerp.batch.repository.BatchExecutionRepository
+import com.modularerp.batch.repository.BatchJobRepository
 import com.modularerp.core.exception.EntityNotFoundException
 import com.modularerp.security.tenant.TenantContext
 import org.springframework.data.domain.Page
@@ -22,15 +32,36 @@ class BatchService(
 
     fun getJobById(id: Long): BatchJobResponse = findJob(id).toResponse()
 
-    fun searchJobs(jobType: BatchJobType?, enabled: Boolean?, pageable: Pageable): Page<BatchJobResponse> =
-        jobRepository.search(TenantContext.getTenantId(), jobType, enabled, pageable).map { it.toResponse() }
+    fun searchJobs(
+        jobType: BatchJobType?,
+        enabled: Boolean?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<BatchJobResponse> =
+        jobRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            jobType = jobType,
+            enabled = enabled,
+            applyAnyScope = scopeFilter.companyCodes.isNotEmpty() || scopeFilter.departmentCodes.isNotEmpty() || scopeFilter.plantCodes.isNotEmpty(),
+            applyCompanyScope = scopeFilter.companyCodes.isNotEmpty(),
+            companyCodes = scopeFilter.scopedCompanyCodes(),
+            applyDepartmentScope = scopeFilter.departmentCodes.isNotEmpty(),
+            departmentCodes = scopeFilter.scopedDepartmentCodes(),
+            applyPlantScope = scopeFilter.plantCodes.isNotEmpty(),
+            plantCodes = scopeFilter.scopedPlantCodes(),
+            pageable = pageable
+        ).map { it.toResponse() }
 
     @Transactional
     fun createJob(request: CreateBatchJobRequest): BatchJobResponse {
         val tenantId = TenantContext.getTenantId()
         val job = BatchJob(
             jobCode = request.jobCode, jobName = request.jobName,
-            jobType = request.jobType, cronExpression = request.cronExpression,
+            jobType = request.jobType,
+            companyCode = request.companyCode,
+            departmentCode = request.departmentCode,
+            plantCode = request.plantCode,
+            cronExpression = request.cronExpression,
             enabled = request.enabled, description = request.description
         ).apply { assignTenant(tenantId) }
         return jobRepository.save(job).toResponse()
@@ -40,6 +71,9 @@ class BatchService(
     fun updateJob(id: Long, request: UpdateBatchJobRequest): BatchJobResponse {
         val job = findJob(id)
         request.jobName?.let { job.jobName = it }
+        request.companyCode?.let { job.companyCode = it }
+        request.departmentCode?.let { job.departmentCode = it }
+        request.plantCode?.let { job.plantCode = it }
         request.cronExpression?.let { job.cronExpression = it }
         request.description?.let { job.description = it }
         return jobRepository.save(job).toResponse()

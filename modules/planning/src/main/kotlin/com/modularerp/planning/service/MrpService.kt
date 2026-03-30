@@ -1,5 +1,6 @@
 package com.modularerp.planning.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.core.exception.EntityNotFoundException
 import com.modularerp.logistics.repository.StockSummaryRepository
 import com.modularerp.masterdata.service.BomService
@@ -41,8 +42,13 @@ class MrpService(
         mrpRunRepository.findByTenantIdAndId(TenantContext.getTenantId(), id)
             .orElseThrow { EntityNotFoundException("MrpRun", id) }.toResponse()
 
-    fun findRecent(pageable: Pageable): Page<MrpRunResponse> =
-        mrpRunRepository.findRecent(TenantContext.getTenantId(), pageable).map { it.toResponse() }
+    fun findRecent(scopeFilter: DataScopeSearchFilter, pageable: Pageable): Page<MrpRunResponse> =
+        mrpRunRepository.findRecent(
+            tenantId = TenantContext.getTenantId(),
+            applyPlantScope = scopeFilter.plantCodes.isNotEmpty(),
+            plantCodes = scopeFilter.scopedPlantCodes(),
+            pageable = pageable
+        ).map { it.toResponse() }
 
     /**
      * MRP 실행 — 지정 공장의 자재소요계획을 일괄 수행.
@@ -62,7 +68,17 @@ class MrpService(
         // 1단계: 출고지시(RELEASED) WO의 미충족 소요자재에서 수요 수집
         val demand = mutableMapOf<String, DemandEntry>()
         val openWos = workOrderRepository.search(
-            tenantId, WoStatus.RELEASED, request.plantCode, null, null, PageRequest.of(0, 1000)
+            tenantId = tenantId,
+            status = WoStatus.RELEASED,
+            plantCode = request.plantCode,
+            productCode = null,
+            documentNo = null,
+            applyCompanyScope = false,
+            companyCodes = emptyList(),
+            applyPlantScope = false,
+            plantCodes = emptyList(),
+            createdBy = null,
+            pageable = PageRequest.of(0, 1000)
         ).content
 
         for (wo in openWos) {

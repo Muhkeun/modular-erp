@@ -1,5 +1,6 @@
 package com.modularerp.hr.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.core.exception.EntityNotFoundException
 import com.modularerp.hr.domain.*
 import com.modularerp.hr.dto.*
@@ -18,8 +19,24 @@ class EmployeeService(private val employeeRepository: EmployeeRepository) {
         employeeRepository.findByTenantIdAndId(TenantContext.getTenantId(), id)
             .orElseThrow { EntityNotFoundException("Employee", id) }.toResponse()
 
-    fun search(status: EmployeeStatus?, departmentCode: String?, name: String?, pageable: Pageable): Page<EmployeeResponse> =
-        employeeRepository.search(TenantContext.getTenantId(), status, departmentCode, name, pageable).map { it.toResponse() }
+    fun search(
+        status: EmployeeStatus?,
+        departmentCode: String?,
+        name: String?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<EmployeeResponse> =
+        employeeRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            status = status,
+            departmentCode = departmentCode,
+            name = name,
+            applyCompanyScope = scopeFilter.companyCodes.isNotEmpty(),
+            companyCodes = scopeFilter.scopedCompanyCodes(),
+            applyDepartmentScope = scopeFilter.departmentCodes.isNotEmpty(),
+            departmentCodes = scopeFilter.scopedDepartmentCodes(),
+            pageable = pageable
+        ).map { it.toResponse() }
 
     @Transactional
     fun create(request: CreateEmployeeRequest): EmployeeResponse {

@@ -22,10 +22,13 @@ import java.time.LocalDate
  * - 참조문서(referenceDocNo)로 수주/WO 등 원 전표와 연결
  */
 @Entity
-@Table(name = "goods_issues")
+@Table(
+    name = "goods_issues",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["tenant_id", "document_no"])]
+)
 class GoodsIssue(
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, length = 30)
     var documentNo: String = "",
 
     @Column(nullable = false, length = 20)

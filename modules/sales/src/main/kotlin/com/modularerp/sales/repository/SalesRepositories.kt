@@ -16,8 +16,15 @@ interface SalesOrderRepository : JpaRepository<SalesOrder, Long> {
         AND (:status IS NULL OR so.status = :status)
         AND (:customerCode IS NULL OR so.customerCode = :customerCode)
         AND (:documentNo IS NULL OR so.documentNo LIKE %:documentNo%)
+        AND (:applyCompanyScope = false OR so.companyCode IN :companyCodes)
+        AND (:applyPlantScope = false OR so.plantCode IN :plantCodes)
+        AND (:createdBy IS NULL OR so.createdBy = :createdBy)
         ORDER BY so.createdAt DESC
     """)
     fun search(tenantId: String, status: SoStatus?, customerCode: String?,
-               documentNo: String?, pageable: Pageable): Page<SalesOrder>
+               documentNo: String?,
+               applyCompanyScope: Boolean, companyCodes: Collection<String>,
+               applyPlantScope: Boolean, plantCodes: Collection<String>,
+               createdBy: String?,
+               pageable: Pageable): Page<SalesOrder>
 }

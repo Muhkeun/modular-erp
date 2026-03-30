@@ -6,10 +6,13 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 @Entity
-@Table(name = "contracts")
+@Table(
+    name = "contracts",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["tenant_id", "document_no"])]
+)
 class Contract(
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, length = 30)
     var documentNo: String = "",
 
     @Column(nullable = false, length = 200)

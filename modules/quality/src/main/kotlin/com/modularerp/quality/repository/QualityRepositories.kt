@@ -14,7 +14,15 @@ interface QualityInspectionRepository : JpaRepository<QualityInspection, Long> {
         SELECT qi FROM QualityInspection qi WHERE qi.tenantId = :tenantId AND qi.active = true
         AND (:status IS NULL OR qi.status = :status)
         AND (:inspectionType IS NULL OR qi.inspectionType = :inspectionType)
+        AND (:applyPlantScope = false OR qi.plantCode IN :plantCodes)
         ORDER BY qi.createdAt DESC
     """)
-    fun search(tenantId: String, status: QiStatus?, inspectionType: InspectionType?, pageable: Pageable): Page<QualityInspection>
+    fun search(
+        tenantId: String,
+        status: QiStatus?,
+        inspectionType: InspectionType?,
+        applyPlantScope: Boolean,
+        plantCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<QualityInspection>
 }

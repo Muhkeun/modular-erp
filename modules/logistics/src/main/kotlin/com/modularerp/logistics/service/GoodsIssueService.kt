@@ -1,5 +1,6 @@
 package com.modularerp.logistics.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.core.exception.EntityNotFoundException
 import com.modularerp.document.service.DocumentNumberGenerator
 import com.modularerp.logistics.domain.*
@@ -22,8 +23,23 @@ class GoodsIssueService(
     fun getById(id: Long): GiResponse =
         findGi(id).toResponse()
 
-    fun search(status: GiStatus?, documentNo: String?, pageable: Pageable): Page<GiResponse> =
-        giRepository.search(TenantContext.getTenantId(), status, documentNo, pageable).map { it.toResponse() }
+    fun search(status: GiStatus?, documentNo: String?, scopeFilter: DataScopeSearchFilter, pageable: Pageable): Page<GiResponse> {
+        if (!scopeFilter.isSupportedBy(supportsOwn = true, supportsCompany = true, supportsDepartment = false, supportsPlant = true)) {
+            return Page.empty(pageable)
+        }
+
+        return giRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            status = status,
+            documentNo = documentNo,
+            applyCompanyScope = scopeFilter.companyCodes.isNotEmpty(),
+            companyCodes = scopeFilter.scopedCompanyCodes(),
+            applyPlantScope = scopeFilter.plantCodes.isNotEmpty(),
+            plantCodes = scopeFilter.scopedPlantCodes(),
+            createdBy = scopeFilter.ownUserId,
+            pageable = pageable
+        ).map { it.toResponse() }
+    }
 
     @Transactional
     fun create(request: CreateGiRequest): GiResponse {

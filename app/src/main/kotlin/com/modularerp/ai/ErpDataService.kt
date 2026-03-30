@@ -56,7 +56,18 @@ class ErpDataService(
         val status = filters["status"]?.let { runCatching { SoStatus.valueOf(it) }.getOrNull() }
         val pageable = parsePageable(filters)
 
-        val page = salesOrderRepo.search(tenantId, status, filters["customerCode"], filters["documentNo"], pageable)
+        val page = salesOrderRepo.search(
+            tenantId = tenantId,
+            status = status,
+            customerCode = filters["customerCode"],
+            documentNo = filters["documentNo"],
+            applyCompanyScope = false,
+            companyCodes = emptyList(),
+            applyPlantScope = false,
+            plantCodes = emptyList(),
+            createdBy = null,
+            pageable = pageable
+        )
         val columns = listOf("id", "documentNo", "customerCode", "status", "orderDate", "totalAmount", "currencyCode")
         val data = page.content.map {
             listOf<Any?>(it.id, it.documentNo, it.customerCode, it.status.name, it.orderDate, it.totalAmount, it.currencyCode)
@@ -68,7 +79,18 @@ class ErpDataService(
         val status = filters["status"]?.let { runCatching { PoStatus.valueOf(it) }.getOrNull() }
         val pageable = parsePageable(filters)
 
-        val page = purchaseOrderRepo.search(tenantId, status, filters["vendorCode"], filters["documentNo"], pageable)
+        val page = purchaseOrderRepo.search(
+            tenantId = tenantId,
+            status = status,
+            vendorCode = filters["vendorCode"],
+            documentNo = filters["documentNo"],
+            applyCompanyScope = false,
+            companyCodes = emptyList(),
+            applyPlantScope = false,
+            plantCodes = emptyList(),
+            createdBy = null,
+            pageable = pageable
+        )
         val columns = listOf("id", "documentNo", "vendorCode", "status", "orderDate", "totalAmount", "currencyCode")
         val data = page.content.map {
             listOf<Any?>(it.id, it.documentNo, it.vendorCode, it.status.name, it.orderDate, it.totalAmount, it.currencyCode)
@@ -78,7 +100,14 @@ class ErpDataService(
 
     fun queryStockSummary(tenantId: String, filters: Map<String, String>): QueryResult {
         val pageable = parsePageable(filters)
-        val page = stockSummaryRepo.search(tenantId, filters["plantCode"], filters["itemCode"], pageable)
+        val page = stockSummaryRepo.search(
+            tenantId = tenantId,
+            plantCode = filters["plantCode"],
+            itemCode = filters["itemCode"],
+            applyPlantScope = false,
+            plantCodes = emptyList(),
+            pageable = pageable
+        )
         val columns = listOf("id", "itemCode", "plantCode", "storageLocation", "quantityOnHand", "availableQuantity", "unitOfMeasure")
         val data = page.content.map {
             listOf<Any?>(it.id, it.itemCode, it.plantCode, it.storageLocation, it.quantityOnHand, it.availableQuantity, it.unitOfMeasure)
@@ -88,7 +117,15 @@ class ErpDataService(
 
     fun queryJournalEntries(tenantId: String, filters: Map<String, String>): QueryResult {
         val pageable = parsePageable(filters)
-        val page = journalEntryRepo.search(tenantId, null, null, filters["documentNo"], pageable)
+        val page = journalEntryRepo.search(
+            tenantId = tenantId,
+            status = null,
+            entryType = null,
+            documentNo = filters["documentNo"],
+            applyCompanyScope = false,
+            companyCodes = emptyList(),
+            pageable = pageable
+        )
         val columns = listOf("id", "documentNo", "entryType", "status", "postingDate", "description")
         val data = page.content.map {
             listOf<Any?>(it.id, it.documentNo, it.entryType.name, it.status.name, it.postingDate, it.description)
@@ -98,7 +135,17 @@ class ErpDataService(
 
     fun queryEmployees(tenantId: String, filters: Map<String, String>): QueryResult {
         val pageable = parsePageable(filters)
-        val page = employeeRepo.search(tenantId, null, filters["departmentCode"], filters["name"], pageable)
+        val page = employeeRepo.search(
+            tenantId = tenantId,
+            status = null,
+            departmentCode = filters["departmentCode"],
+            name = filters["name"],
+            applyCompanyScope = false,
+            companyCodes = emptyList(),
+            applyDepartmentScope = false,
+            departmentCodes = emptyList(),
+            pageable = pageable
+        )
         val columns = listOf("id", "employeeNo", "name", "departmentCode", "status")
         val data = page.content.map {
             listOf<Any?>(it.id, it.employeeNo, it.name, it.departmentCode, it.status.name)
@@ -110,7 +157,19 @@ class ErpDataService(
         val status = filters["status"]?.let { runCatching { WoStatus.valueOf(it) }.getOrNull() }
         val pageable = parsePageable(filters)
 
-        val page = workOrderRepo.search(tenantId, status, filters["plantCode"], filters["productCode"], filters["documentNo"], pageable)
+        val page = workOrderRepo.search(
+            tenantId = tenantId,
+            status = status,
+            plantCode = filters["plantCode"],
+            productCode = filters["productCode"],
+            documentNo = filters["documentNo"],
+            applyCompanyScope = false,
+            companyCodes = emptyList(),
+            applyPlantScope = false,
+            plantCodes = emptyList(),
+            createdBy = null,
+            pageable = pageable
+        )
         val columns = listOf("id", "documentNo", "productCode", "plantCode", "status", "plannedQuantity", "completedQuantity")
         val data = page.content.map {
             listOf<Any?>(it.id, it.documentNo, it.productCode, it.plantCode, it.status.name, it.plannedQuantity, it.completedQuantity)
@@ -120,7 +179,15 @@ class ErpDataService(
 
     fun queryCustomers(tenantId: String, filters: Map<String, String>): QueryResult {
         val pageable = parsePageable(filters)
-        val page = customerRepo.search(tenantId, null, filters["customerCode"], filters["customerName"], pageable)
+        val page = customerRepo.search(
+            tenantId = tenantId,
+            status = null,
+            customerCode = filters["customerCode"],
+            customerName = filters["customerName"],
+            applyOwnScope = false,
+            ownUserId = "__NO_MATCH__",
+            pageable = pageable
+        )
         val columns = listOf("id", "customerCode", "customerName", "status")
         val data = page.content.map {
             listOf<Any?>(it.id, it.customerCode, it.customerName, it.status.name)
@@ -143,7 +210,18 @@ class ErpDataService(
 
     fun getSalesSummary(tenantId: String, fromDate: LocalDate, toDate: LocalDate): Map<String, Any> {
         val pageable = PageRequest.of(0, 1000)
-        val page = salesOrderRepo.search(tenantId, null, null, null, pageable)
+        val page = salesOrderRepo.search(
+            tenantId = tenantId,
+            status = null,
+            customerCode = null,
+            documentNo = null,
+            applyCompanyScope = false,
+            companyCodes = emptyList(),
+            applyPlantScope = false,
+            plantCodes = emptyList(),
+            createdBy = null,
+            pageable = pageable
+        )
         val orders = page.content.filter { it.orderDate in fromDate..toDate }
 
         return mapOf(
@@ -157,7 +235,18 @@ class ErpDataService(
 
     fun getPurchaseSummary(tenantId: String, fromDate: LocalDate, toDate: LocalDate): Map<String, Any> {
         val pageable = PageRequest.of(0, 1000)
-        val page = purchaseOrderRepo.search(tenantId, null, null, null, pageable)
+        val page = purchaseOrderRepo.search(
+            tenantId = tenantId,
+            status = null,
+            vendorCode = null,
+            documentNo = null,
+            applyCompanyScope = false,
+            companyCodes = emptyList(),
+            applyPlantScope = false,
+            plantCodes = emptyList(),
+            createdBy = null,
+            pageable = pageable
+        )
         val orders = page.content.filter { it.orderDate in fromDate..toDate }
 
         return mapOf(
@@ -171,7 +260,14 @@ class ErpDataService(
 
     fun getStockAlerts(tenantId: String): List<Map<String, Any>> {
         val pageable = PageRequest.of(0, 500)
-        val page = stockSummaryRepo.search(tenantId, null, null, pageable)
+        val page = stockSummaryRepo.search(
+            tenantId = tenantId,
+            plantCode = null,
+            itemCode = null,
+            applyPlantScope = false,
+            plantCodes = emptyList(),
+            pageable = pageable
+        )
         return page.content
             .filter { it.availableQuantity <= java.math.BigDecimal.ZERO }
             .map {

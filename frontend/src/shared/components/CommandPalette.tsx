@@ -2,12 +2,14 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import {
-  Search, LayoutGrid, ShoppingCart, Truck, Factory, DollarSign,
-  Users, Package, CalendarClock, Building2, ClipboardCheck, FileText,
-  Plus, ArrowRight,
-} from "lucide-react";
+import { Search, ArrowRight } from "lucide-react";
 import { clsx } from "clsx";
+import {
+  buildPageCommandItems,
+  buildVisibleMenuCodeSet,
+  commandActionItems,
+  type CommandItemDefinition,
+} from "../navigation";
 
 interface PaletteItem {
   id: string;
@@ -22,6 +24,7 @@ interface PaletteItem {
 interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
+  visibleMenuCodes?: string[];
 }
 
 function fuzzyMatch(text: string, query: string): boolean {
@@ -34,7 +37,7 @@ function fuzzyMatch(text: string, query: string): boolean {
   return qi === q.length;
 }
 
-export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
+export default function CommandPalette({ open, onClose, visibleMenuCodes }: CommandPaletteProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -49,31 +52,22 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     [navigate, onClose]
   );
 
-  const items = useMemo<PaletteItem[]>(
-    () => [
-      // Pages
-      { id: "dashboard", title: t("nav.dashboard"), category: "page", icon: <LayoutGrid size={16} />, action: () => go("/dashboard"), keywords: ["home"] },
-      { id: "pr", title: t("nav.purchaseRequests"), category: "page", icon: <ShoppingCart size={16} />, action: () => go("/purchase/requests"), keywords: ["pr", "procurement"] },
-      { id: "po", title: t("nav.purchaseOrders"), category: "page", icon: <ShoppingCart size={16} />, action: () => go("/purchase/orders"), keywords: ["po"] },
-      { id: "so", title: t("nav.salesOrders"), category: "page", icon: <DollarSign size={16} />, action: () => go("/sales/orders") },
-      { id: "wo", title: t("nav.workOrders"), category: "page", icon: <Factory size={16} />, action: () => go("/production/work-orders") },
-      { id: "gr", title: t("nav.goodsReceipt"), category: "page", icon: <Truck size={16} />, action: () => go("/logistics/gr") },
-      { id: "gi", title: t("nav.goodsIssue"), category: "page", icon: <Truck size={16} />, action: () => go("/logistics/gi") },
-      { id: "stock", title: t("nav.stockOverview"), category: "page", icon: <Package size={16} />, action: () => go("/logistics/stock") },
-      { id: "mrp", title: t("nav.mrp"), category: "page", icon: <CalendarClock size={16} />, action: () => go("/planning/mrp") },
-      { id: "je", title: t("nav.journalEntries"), category: "page", icon: <Building2 size={16} />, action: () => go("/account/journal") },
-      { id: "hr", title: t("nav.hr"), category: "page", icon: <Users size={16} />, action: () => go("/hr") },
-      { id: "items", title: t("nav.items"), category: "page", icon: <Package size={16} />, action: () => go("/master-data/items") },
-      { id: "quality", title: t("nav.quality"), category: "page", icon: <ClipboardCheck size={16} />, action: () => go("/quality") },
-      { id: "approvals", title: t("nav.approvals"), category: "page", icon: <FileText size={16} />, action: () => go("/approvals") },
-      // Actions
-      { id: "new-pr", title: t("pr.newPr"), category: "action", icon: <Plus size={16} />, shortcut: "Ctrl+N", action: () => go("/purchase/requests"), keywords: ["create", "new"] },
-      { id: "new-po", title: t("po.newPo"), category: "action", icon: <Plus size={16} />, action: () => go("/purchase/orders") },
-      { id: "new-so", title: t("so.newSo"), category: "action", icon: <Plus size={16} />, action: () => go("/sales/orders") },
-      { id: "new-item", title: t("item.newItem"), category: "action", icon: <Plus size={16} />, action: () => go("/master-data/items/new") },
-    ],
-    [t, go]
-  );
+  const items = useMemo<PaletteItem[]>(() => {
+    const visibleCodes = visibleMenuCodes ? buildVisibleMenuCodeSet(visibleMenuCodes) : null;
+    const commandDefinitions: CommandItemDefinition[] = [...buildPageCommandItems(), ...commandActionItems];
+
+    return commandDefinitions
+      .filter((item) => !visibleCodes || visibleCodes.has(item.menuCode))
+      .map((item) => ({
+        id: item.id,
+        title: t(item.titleKey),
+        category: item.category,
+        icon: item.icon,
+        shortcut: item.shortcut,
+        action: () => go(item.path),
+        keywords: item.keywords,
+      }));
+  }, [go, t, visibleMenuCodes]);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return items.slice(0, 10);

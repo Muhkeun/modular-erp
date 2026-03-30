@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import api, { type ApiResponse } from '../api/client';
 
@@ -14,25 +14,16 @@ interface FieldPermissionMap {
  */
 export function useFieldPermission(resource: string) {
   const { roles } = useAuth();
-  const [permissions, setPermissions] = useState<FieldPermissionMap>({});
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!roles.length || !resource) {
-      setLoading(false);
-      return;
-    }
-
-    api.get<ApiResponse<Record<string, string>>>('/api/v1/admin/field-permissions/merged', {
-      params: { roles: roles.join(','), resource },
-    })
-      .then((res) => {
-        const data = res.data.data ?? {};
-        setPermissions(data as FieldPermissionMap);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [roles, resource]);
+  const { data: permissions = {}, isLoading: loading } = useQuery({
+    queryKey: ['field-permissions', roles, resource],
+    queryFn: async () => {
+      const response = await api.get<ApiResponse<Record<string, string>>>('/api/v1/admin/field-permissions/merged', {
+        params: { roles: roles.join(','), resource },
+      });
+      return (response.data.data ?? {}) as FieldPermissionMap;
+    },
+    enabled: roles.length > 0 && !!resource,
+  });
 
   const getAccess = (fieldName: string): FieldAccessLevel =>
     permissions[fieldName] ?? 'FULL';

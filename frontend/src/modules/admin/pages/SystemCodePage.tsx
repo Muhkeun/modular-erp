@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { systemCodeApi, type SystemCode } from '../../../shared/api/adminApi';
 import PageHeader from '../../../shared/components/PageHeader';
 import DataGrid from '../../../shared/components/DataGrid';
-import type { ColDef } from 'ag-grid-community';
+import type { ColDef, ICellRendererParams, ValueGetterParams } from 'ag-grid-community';
+import type { SystemCodeItem } from '../../../shared/api/adminApi';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 
 export default function SystemCodePage() {
@@ -33,22 +34,22 @@ export default function SystemCodePage() {
     { field: 'description', headerName: t('common.description', '설명'), flex: 2 },
     {
       field: 'isSystem', headerName: t('admin.system', '시스템'), width: 100,
-      cellRenderer: (p: any) => p.value ? '🔒' : '',
+      cellRenderer: ({ value }: ICellRendererParams<SystemCode, boolean>) => value ? '🔒' : '',
     },
     {
       headerName: t('admin.itemCount', '항목 수'), width: 100,
-      valueGetter: (p: any) => p.data?.items?.length ?? 0,
+      valueGetter: ({ data }: ValueGetterParams<SystemCode>) => data?.items?.length ?? 0,
     },
     {
       headerName: '', width: 100, sortable: false, filter: false,
-      cellRenderer: (p: any) => {
-        if (p.data?.isSystem) return null;
+      cellRenderer: ({ data }: ICellRendererParams<SystemCode>) => {
+        if (!data || data.isSystem) return null;
         return (
           <div className="flex gap-1">
-            <button onClick={() => openEdit(p.data)} className="p-1 text-slate-400 hover:text-brand-600">
+            <button onClick={() => openEdit(data)} className="p-1 text-slate-400 hover:text-brand-600">
               <Edit2 size={14} />
             </button>
-            <button onClick={() => handleDelete(p.data.groupCode)} className="p-1 text-slate-400 hover:text-red-500">
+            <button onClick={() => handleDelete(data.groupCode)} className="p-1 text-slate-400 hover:text-red-500">
               <Trash2 size={14} />
             </button>
           </div>
@@ -57,7 +58,7 @@ export default function SystemCodePage() {
     },
   ];
 
-  const itemColDefs: ColDef[] = [
+  const itemColDefs: ColDef<SystemCodeItem>[] = [
     { field: 'code', headerName: t('common.code', '코드'), width: 120 },
     { field: 'name', headerName: t('common.name', '명칭'), flex: 1 },
     { field: 'sortOrder', headerName: t('common.sortOrder', '순서'), width: 80 },

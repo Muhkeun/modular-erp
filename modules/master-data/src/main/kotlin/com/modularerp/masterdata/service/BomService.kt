@@ -1,5 +1,6 @@
 package com.modularerp.masterdata.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.core.exception.EntityNotFoundException
 import com.modularerp.masterdata.domain.*
 import com.modularerp.masterdata.dto.*
@@ -42,8 +43,30 @@ class BomService(private val bomRepository: BomRepository) {
     fun getById(id: Long): BomResponse =
         findBom(id).toResponse()
 
-    fun search(productCode: String?, status: BomStatus?, pageable: Pageable): Page<BomResponse> =
-        bomRepository.search(TenantContext.getTenantId(), productCode, status, pageable).map { it.toResponse() }
+    fun search(
+        productCode: String?,
+        status: BomStatus?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<BomResponse> {
+        if (!scopeFilter.isSupportedBy(
+                supportsOwn = false,
+                supportsCompany = false,
+                supportsDepartment = false,
+                supportsPlant = true
+            )) {
+            return Page.empty(pageable)
+        }
+
+        return bomRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            productCode = productCode,
+            status = status,
+            applyPlantScope = scopeFilter.plantCodes.isNotEmpty(),
+            plantCodes = scopeFilter.scopedPlantCodes(),
+            pageable = pageable
+        ).map { it.toResponse() }
+    }
 
     @Transactional
     fun create(request: CreateBomRequest): BomResponse {

@@ -25,9 +25,19 @@ interface BudgetItemRepository : JpaRepository<BudgetItem, Long> {
     @Query("""
         SELECT bi FROM BudgetItem bi WHERE bi.tenantId = :tenantId AND bi.active = true
         AND bi.budgetPeriod.id = :periodId
+        AND (:applyDepartmentScope = false OR bi.departmentCode IN :departmentCodes)
+        AND (:applyPlantScope = false OR bi.plantCode IN :plantCodes)
         ORDER BY bi.accountCode ASC
     """)
-    fun findByPeriod(tenantId: String, periodId: Long, pageable: Pageable): Page<BudgetItem>
+    fun findByPeriod(
+        tenantId: String,
+        periodId: Long,
+        applyDepartmentScope: Boolean,
+        departmentCodes: Collection<String>,
+        applyPlantScope: Boolean,
+        plantCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<BudgetItem>
 
     @Query("""
         SELECT bi FROM BudgetItem bi WHERE bi.tenantId = :tenantId AND bi.active = true

@@ -16,7 +16,6 @@ test.describe("Master Data Management", () => {
     await page.locator('input.font-mono').first().fill(itemCode);
 
     // Fill translations - name field (first locale row)
-    const nameInputs = page.locator('input').filter({ has: page.locator('[class*="input"]') });
     // Find the name input in the translations section
     const translationSection = page.locator("text=Localization").locator("..");
     const nameInput = translationSection.locator("input").nth(1);

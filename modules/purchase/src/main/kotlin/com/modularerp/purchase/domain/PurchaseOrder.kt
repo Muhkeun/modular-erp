@@ -20,10 +20,13 @@ import java.time.LocalDate
  * - PR과의 추적성: prDocumentNo/prLineNo로 원래 요청과 연결
  */
 @Entity
-@Table(name = "purchase_orders")
+@Table(
+    name = "purchase_orders",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["tenant_id", "document_no"])]
+)
 class PurchaseOrder(
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, length = 30)
     var documentNo: String = "",
 
     @Column(nullable = false, length = 20)

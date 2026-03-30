@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import PageHeader from "../../../shared/components/PageHeader";
-import { approvalApi, type ApprovalRequest, type Delegation } from "../../../shared/api/approvalApi";
+import { approvalApi, type ApprovalRequest } from "../../../shared/api/approvalApi";
 import { Check, X, RotateCcw, Clock, FileText, ChevronDown, ChevronRight, Plus, Trash2, MessageSquare } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -28,28 +29,39 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 
 export default function ApprovalInboxPage() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("pending");
-  const [pending, setPending] = useState<ApprovalRequest[]>([]);
-  const [submitted, setSubmitted] = useState<ApprovalRequest[]>([]);
-  const [delegations, setDelegations] = useState<Delegation[]>([]);
-  const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [commentText, setCommentText] = useState("");
   const [actionComment, setActionComment] = useState("");
   const [showDelegationForm, setShowDelegationForm] = useState(false);
   const [delegationForm, setDelegationForm] = useState({ toUserId: "", startDate: "", endDate: "", reason: "" });
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      if (tab === "pending") setPending(await approvalApi.getMyPending());
-      else if (tab === "submitted") setSubmitted(await approvalApi.getMySubmitted());
-      else setDelegations(await approvalApi.getDelegations());
-    } catch { /* ignore */ }
-    setLoading(false);
-  }, [tab]);
+  // Tabs fetch lazily so large approval histories do not block the primary inbox view.
+  const pendingQuery = useQuery({
+    queryKey: ["approval", "pending"],
+    queryFn: approvalApi.getMyPending,
+    enabled: tab === "pending",
+  });
+  const submittedQuery = useQuery({
+    queryKey: ["approval", "submitted"],
+    queryFn: approvalApi.getMySubmitted,
+    enabled: tab === "submitted",
+  });
+  const delegationsQuery = useQuery({
+    queryKey: ["approval", "delegations"],
+    queryFn: approvalApi.getDelegations,
+    enabled: tab === "delegations",
+  });
 
-  useEffect(() => { loadData(); }, [loadData]);
+  const pending = pendingQuery.data ?? [];
+  const submitted = submittedQuery.data ?? [];
+  const delegations = delegationsQuery.data ?? [];
+  const loading = pendingQuery.isLoading || submittedQuery.isLoading || delegationsQuery.isLoading;
+
+  const reloadData = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["approval"] });
+  };
 
   const handleAction = async (req: ApprovalRequest, action: "approve" | "reject" | "return") => {
     const activeStep = req.steps.find(s => s.stepStatus === "ACTIVE" && !s.decision);
@@ -60,7 +72,7 @@ export default function ApprovalInboxPage() {
         : approvalApi.returnStep;
       await fn(req.id, activeStep.id, actionComment || undefined);
       setActionComment("");
-      loadData();
+      await reloadData();
     } catch { /* ignore */ }
   };
 
@@ -69,7 +81,7 @@ export default function ApprovalInboxPage() {
     try {
       await approvalApi.addComment(reqId, commentText);
       setCommentText("");
-      loadData();
+      await reloadData();
     } catch { /* ignore */ }
   };
 
@@ -79,14 +91,14 @@ export default function ApprovalInboxPage() {
       await approvalApi.createDelegation(delegationForm);
       setShowDelegationForm(false);
       setDelegationForm({ toUserId: "", startDate: "", endDate: "", reason: "" });
-      loadData();
+      await reloadData();
     } catch { /* ignore */ }
   };
 
   const handleDeleteDelegation = async (id: number) => {
     try {
       await approvalApi.deleteDelegation(id);
-      loadData();
+      await reloadData();
     } catch { /* ignore */ }
   };
 

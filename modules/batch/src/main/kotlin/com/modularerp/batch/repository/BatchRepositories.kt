@@ -1,6 +1,9 @@
 package com.modularerp.batch.repository
 
-import com.modularerp.batch.domain.*
+import com.modularerp.batch.domain.BatchExecution
+import com.modularerp.batch.domain.BatchJob
+import com.modularerp.batch.domain.BatchJobType
+import com.modularerp.batch.domain.ExecutionStatus
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
@@ -15,9 +18,27 @@ interface BatchJobRepository : JpaRepository<BatchJob, Long> {
         SELECT j FROM BatchJob j WHERE j.tenantId = :tenantId AND j.active = true
         AND (:jobType IS NULL OR j.jobType = :jobType)
         AND (:enabled IS NULL OR j.enabled = :enabled)
+        AND (
+            :applyAnyScope = false
+            OR (:applyDepartmentScope = true AND j.departmentCode IS NOT NULL AND j.departmentCode IN :departmentCodes)
+            OR (:applyPlantScope = true AND j.plantCode IS NOT NULL AND j.plantCode IN :plantCodes)
+            OR (:applyCompanyScope = true AND j.companyCode IS NOT NULL AND j.companyCode IN :companyCodes)
+        )
         ORDER BY j.jobCode ASC
     """)
-    fun search(tenantId: String, jobType: BatchJobType?, enabled: Boolean?, pageable: Pageable): Page<BatchJob>
+    fun search(
+        tenantId: String,
+        jobType: BatchJobType?,
+        enabled: Boolean?,
+        applyAnyScope: Boolean,
+        applyCompanyScope: Boolean,
+        companyCodes: Collection<String>,
+        applyDepartmentScope: Boolean,
+        departmentCodes: Collection<String>,
+        applyPlantScope: Boolean,
+        plantCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<BatchJob>
 }
 
 interface BatchExecutionRepository : JpaRepository<BatchExecution, Long> {

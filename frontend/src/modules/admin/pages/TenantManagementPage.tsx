@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { tenantApi, type Tenant } from '../../../shared/api/adminPhase4Api';
 import PageHeader from '../../../shared/components/PageHeader';
 import DataGrid from '../../../shared/components/DataGrid';
-import type { ColDef } from 'ag-grid-community';
+import type { ColDef, ICellRendererParams, ValueGetterParams } from 'ag-grid-community';
 import { Plus, Pause, Play } from 'lucide-react';
 
 const PLAN_COLORS: Record<string, string> = {
@@ -21,47 +22,47 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function TenantManagementPage() {
   const { t } = useTranslation();
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = () => {
-    setLoading(true);
-    tenantApi.getAll().then(setTenants).finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
+  const [tenants] = useState<Tenant[]>([]);
+  const {
+    data = tenants,
+    isLoading: loading,
+    refetch,
+  } = useQuery({
+    queryKey: ['admin', 'tenants'],
+    queryFn: tenantApi.getAll,
+  });
 
   const columnDefs: ColDef<Tenant>[] = [
     { field: 'tenantId', headerName: 'Tenant ID', width: 130 },
     { field: 'name', headerName: t('common.name', '명칭'), flex: 1 },
     {
       field: 'plan', headerName: 'Plan', width: 120,
-      cellRenderer: (p: any) => (
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${PLAN_COLORS[p.value] ?? ''}`}>
-          {p.value}
+      cellRenderer: ({ value }: ICellRendererParams<Tenant, Tenant['plan']>) => (
+        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${value ? PLAN_COLORS[value] : ''}`}>
+          {value}
         </span>
       ),
     },
     {
       field: 'status', headerName: t('common.status', '상태'), width: 110,
-      cellRenderer: (p: any) => (
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${STATUS_COLORS[p.value] ?? ''}`}>
-          {p.value}
+      cellRenderer: ({ value }: ICellRendererParams<Tenant, Tenant['status']>) => (
+        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${value ? STATUS_COLORS[value] : ''}`}>
+          {value}
         </span>
       ),
     },
     {
       headerName: t('admin.users', '사용자'), width: 120,
-      valueGetter: (p: any) => `${p.data?.currentUsers ?? 0} / ${p.data?.maxUsers ?? 0}`,
+      valueGetter: ({ data }: ValueGetterParams<Tenant>) => `${data?.currentUsers ?? 0} / ${data?.maxUsers ?? 0}`,
     },
     {
       headerName: t('admin.storage', '저장공간'), width: 120,
-      valueGetter: (p: any) => `${p.data?.maxStorageMb ?? 0} MB`,
+      valueGetter: ({ data }: ValueGetterParams<Tenant>) => `${data?.maxStorageMb ?? 0} MB`,
     },
     {
       headerName: '', width: 100, sortable: false, filter: false,
-      cellRenderer: (p: any) => {
-        const tenant = p.data as Tenant;
+      cellRenderer: ({ data: tenant }: ICellRendererParams<Tenant>) => {
+        if (!tenant) return null;
         return (
           <div className="flex gap-1">
             {tenant.status === 'ACTIVE' ? (
@@ -82,12 +83,12 @@ export default function TenantManagementPage() {
   const handleSuspend = async (tenantId: string) => {
     if (!confirm(`${tenantId} 테넌트를 정지하시겠습니까?`)) return;
     await tenantApi.suspend(tenantId);
-    load();
+    await refetch();
   };
 
   const handleActivate = async (tenantId: string) => {
     await tenantApi.activate(tenantId);
-    load();
+    await refetch();
   };
 
   return (
@@ -98,7 +99,7 @@ export default function TenantManagementPage() {
         </button>
       } />
 
-      <DataGrid rowData={tenants} columnDefs={columnDefs} loading={loading} height="calc(100vh - 340px)" />
+      <DataGrid rowData={data} columnDefs={columnDefs} loading={loading} height="calc(100vh - 340px)" />
     </div>
   );
 }

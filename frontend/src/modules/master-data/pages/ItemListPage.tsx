@@ -1,12 +1,16 @@
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { ColDef } from "ag-grid-community";
 import { Plus, Download, Upload, Filter } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
 import api, { type ApiResponse } from "../../../shared/api/client";
+import { exportApi, type GenericExportRequest } from "../../../shared/api/reportApi";
+import { useToast } from "../../../shared/components/useToast";
+import { useFieldPermission } from "../../../shared/hooks/useFieldPermission";
+import { downloadBlob } from "../../../shared/utils/download";
 
 interface ItemRow {
   id: number;
@@ -24,8 +28,10 @@ interface ItemRow {
 export default function ItemListPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const toast = useToast();
   const [filters, setFilters] = useState({ code: "", itemType: "", itemGroup: "" });
   const [showFilters, setShowFilters] = useState(false);
+  const fieldPermission = useFieldPermission("items");
 
   const { data, isLoading } = useQuery({
     queryKey: ["items", filters],
@@ -41,60 +47,151 @@ export default function ItemListPage() {
   });
 
   const columnDefs = useMemo<ColDef<ItemRow>[]>(
-    () => [
-      {
-        field: "code",
-        headerName: t("item.code"),
-        flex: 1.2,
-        cellRenderer: (params: { value: string }) => (
-          <span className="font-mono text-sm font-semibold text-brand-700">{params.value}</span>
-        ),
-      },
-      { field: "name", headerName: t("item.name"), flex: 2 },
-      {
-        field: "itemType",
-        headerName: t("item.type"),
-        flex: 1,
-        cellRenderer: (params: { value: string }) => {
-          const typeClasses: Record<string, string> = {
-            MATERIAL: "badge-info",
-            PRODUCT: "badge-success",
-            SEMI_PRODUCT: "badge-warning",
-            SERVICE: "bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-600/20",
-            ASSET: "bg-slate-50 text-slate-700 ring-1 ring-inset ring-slate-600/20",
-          };
-          const cls = typeClasses[params.value] || "badge";
-          return <span className={`badge ${cls}`}>{t("item.types." + params.value, params.value)}</span>;
+    () => {
+      const maskValue = (fieldName: string, value: string | null | undefined) =>
+        fieldPermission.isMasked(fieldName) ? "••••••" : (value ?? "-");
+
+      const columns: ColDef<ItemRow>[] = [
+        {
+          field: "code",
+          headerName: t("item.code"),
+          flex: 1.2,
+          cellRenderer: (params: { value: string }) => (
+            <span className="font-mono text-sm font-semibold text-brand-700">{maskValue("code", params.value)}</span>
+          ),
         },
-      },
-      { field: "itemGroup", headerName: t("item.group"), flex: 1 },
-      { field: "unitOfMeasure", headerName: t("item.uom"), flex: 0.6, maxWidth: 80 },
-      { field: "specification", headerName: t("item.spec"), flex: 1.5 },
-      { field: "makerName", headerName: t("item.maker"), flex: 1 },
-      {
-        field: "qualityInspectionRequired",
-        headerName: t("item.qi"),
-        flex: 0.5,
-        maxWidth: 70,
-        cellRenderer: (params: { value: boolean }) =>
-          params.value ? <span className="badge-warning">Y</span> : <span className="text-slate-300">-</span>,
-      },
-      {
-        field: "active",
-        headerName: t("common.status"),
-        flex: 0.7,
-        maxWidth: 100,
-        cellRenderer: (params: { value: boolean }) =>
-          params.value ? <span className="badge-success">{t("common.active")}</span> : <span className="badge-danger">{t("common.inactive")}</span>,
-      },
-    ],
-    [t]
+        {
+          field: "name",
+          headerName: t("item.name"),
+          flex: 2,
+          cellRenderer: (params: { value: string }) => maskValue("name", params.value),
+        },
+        {
+          field: "itemType",
+          headerName: t("item.type"),
+          flex: 1,
+          cellRenderer: (params: { value: string }) => {
+            if (fieldPermission.isMasked("itemType")) return <span>••••••</span>;
+            const typeClasses: Record<string, string> = {
+              MATERIAL: "badge-info",
+              PRODUCT: "badge-success",
+              SEMI_PRODUCT: "badge-warning",
+              SERVICE: "bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-600/20",
+              ASSET: "bg-slate-50 text-slate-700 ring-1 ring-inset ring-slate-600/20",
+            };
+            const cls = typeClasses[params.value] || "badge";
+            return <span className={`badge ${cls}`}>{t("item.types." + params.value, params.value)}</span>;
+          },
+        },
+        {
+          field: "itemGroup",
+          headerName: t("item.group"),
+          flex: 1,
+          cellRenderer: (params: { value: string | null }) => maskValue("itemGroup", params.value),
+        },
+        {
+          field: "unitOfMeasure",
+          headerName: t("item.uom"),
+          flex: 0.6,
+          maxWidth: 80,
+          cellRenderer: (params: { value: string }) => maskValue("unitOfMeasure", params.value),
+        },
+        {
+          field: "specification",
+          headerName: t("item.spec"),
+          flex: 1.5,
+          cellRenderer: (params: { value: string | null }) => maskValue("specification", params.value),
+        },
+        {
+          field: "makerName",
+          headerName: t("item.maker"),
+          flex: 1,
+          cellRenderer: (params: { value: string | null }) => maskValue("makerName", params.value),
+        },
+        {
+          field: "qualityInspectionRequired",
+          headerName: t("item.qi"),
+          flex: 0.5,
+          maxWidth: 70,
+          cellRenderer: (params: { value: boolean }) =>
+            fieldPermission.isMasked("qualityInspectionRequired")
+              ? <span>••••••</span>
+              : params.value ? <span className="badge-warning">Y</span> : <span className="text-slate-300">-</span>,
+        },
+        {
+          field: "active",
+          headerName: t("common.status"),
+          flex: 0.7,
+          maxWidth: 100,
+          cellRenderer: (params: { value: boolean }) =>
+            fieldPermission.isMasked("active")
+              ? <span>••••••</span>
+              : params.value
+                ? <span className="badge-success">{t("common.active")}</span>
+                : <span className="badge-danger">{t("common.inactive")}</span>,
+        },
+      ];
+
+      return columns.filter((column) => fieldPermission.isVisible(String(column.field)));
+    },
+    [fieldPermission, t]
   );
 
   const handleRowClick = useCallback(
     (row: ItemRow) => navigate(`/master-data/items/${row.id}`),
     [navigate]
   );
+
+  const exportRequest = useMemo<GenericExportRequest>(() => {
+    const visibleColumns = columnDefs
+      .filter((column) => typeof column.field === "string" && typeof column.headerName === "string")
+      .map((column) => ({
+        field: String(column.field),
+        header: String(column.headerName),
+      }));
+
+    const maskValue = (fieldName: string, value: unknown) =>
+      fieldPermission.isMasked(fieldName) ? "••••••" : value;
+
+    const rows = (data?.data ?? []).map((row) => ({
+      code: maskValue("code", row.code),
+      name: maskValue("name", row.name),
+      itemType: maskValue("itemType", t(`item.types.${row.itemType}`, row.itemType)),
+      itemGroup: maskValue("itemGroup", row.itemGroup ?? "-"),
+      unitOfMeasure: maskValue("unitOfMeasure", row.unitOfMeasure),
+      specification: maskValue("specification", row.specification ?? "-"),
+      makerName: maskValue("makerName", row.makerName ?? "-"),
+      qualityInspectionRequired: fieldPermission.isMasked("qualityInspectionRequired")
+        ? "••••••"
+        : row.qualityInspectionRequired
+          ? "Y"
+          : "N",
+      active: fieldPermission.isMasked("active")
+        ? "••••••"
+        : row.active
+          ? t("common.active")
+          : t("common.inactive"),
+    }));
+
+    return {
+      moduleName: "master-data.items",
+      title: t("item.title"),
+      fileName: "items.xlsx",
+      columns: visibleColumns,
+      rows,
+    };
+  }, [columnDefs, data?.data, fieldPermission, t]);
+
+  const exportMutation = useMutation({
+    mutationFn: () => exportApi.excel(exportRequest),
+    onSuccess: ({ blob, fileName }) => {
+      downloadBlob(blob, fileName);
+      toast.success(t("common.export"));
+    },
+    onError: () => {
+      toast.error("Export failed");
+    },
+  });
 
   return (
     <div>
@@ -111,7 +208,9 @@ export default function ItemListPage() {
               <Filter size={16} /> {t("common.filters")}
             </button>
             <button className="btn-secondary"><Upload size={16} /> {t("common.import")}</button>
-            <button className="btn-secondary"><Download size={16} /> {t("common.export")}</button>
+            <button className="btn-secondary" onClick={() => exportMutation.mutate()} disabled={exportMutation.isPending || (data?.data?.length ?? 0) === 0}>
+              <Download size={16} /> {exportMutation.isPending ? t("common.loading") : t("common.export")}
+            </button>
             <button className="btn-primary" onClick={() => navigate("/master-data/items/new")}>
               <Plus size={16} /> {t("item.newItem")}
             </button>
@@ -157,6 +256,7 @@ export default function ItemListPage() {
       {/* Grid */}
       <div className="card overflow-hidden">
         <DataGrid<ItemRow>
+          gridId="items.list"
           rowData={data?.data || []}
           columnDefs={columnDefs}
           loading={isLoading}

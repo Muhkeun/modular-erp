@@ -1,5 +1,6 @@
 package com.modularerp.periodclose.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.periodclose.domain.*
 import com.modularerp.periodclose.dto.*
 import com.modularerp.periodclose.repository.*
@@ -22,8 +23,20 @@ class PeriodCloseService(
     private val docNumberGenerator: DocumentNumberGenerator
 ) {
 
-    fun searchPeriods(fiscalYear: Int?, status: FiscalPeriodStatus?, pageable: Pageable): Page<FiscalPeriodResponse> =
-        periodRepository.search(TenantContext.getTenantId(), fiscalYear, status, pageable).map { it.toResponse() }
+    fun searchPeriods(
+        fiscalYear: Int?,
+        status: FiscalPeriodStatus?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<FiscalPeriodResponse> =
+        periodRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            fiscalYear = fiscalYear,
+            status = status,
+            applyCompanyScope = scopeFilter.companyCodes.isNotEmpty(),
+            companyCodes = scopeFilter.scopedCompanyCodes(),
+            pageable = pageable
+        ).map { it.toResponse() }
 
     fun getPeriodById(id: Long): FiscalPeriodResponse = findPeriod(id).toResponse()
 
@@ -31,14 +44,15 @@ class PeriodCloseService(
      * Generate 12 fiscal periods for a given year.
      */
     @Transactional
-    fun createFiscalYear(fiscalYear: Int): List<FiscalPeriodResponse> {
+    fun createFiscalYear(companyCode: String, fiscalYear: Int): List<FiscalPeriodResponse> {
         val tenantId = TenantContext.getTenantId()
-        val existing = periodRepository.findByFiscalYear(tenantId, fiscalYear)
+        val existing = periodRepository.findByCompanyCodeAndFiscalYear(tenantId, companyCode, fiscalYear)
         check(existing.isEmpty()) { "Fiscal year $fiscalYear already exists" }
 
         val periods = (1..12).map { month ->
             val ym = YearMonth.of(fiscalYear, month)
             FiscalPeriod(
+                companyCode = companyCode,
                 fiscalYear = fiscalYear, period = month,
                 periodName = "$fiscalYear-%02d".format(month),
                 startDate = ym.atDay(1), endDate = ym.atEndOfMonth()

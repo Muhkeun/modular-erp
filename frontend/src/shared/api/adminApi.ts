@@ -36,6 +36,11 @@ export interface MenuProfile {
   menuItems: MenuProfileItem[];
 }
 
+export interface ResolvedMenuProfile {
+  appliedProfiles: string[];
+  menuItems: MenuProfileItem[];
+}
+
 // ── SystemCode Types ──
 
 export interface SystemCodeItem {
@@ -101,6 +106,7 @@ export const roleApi = {
 
 export const menuProfileApi = {
   getAll: () => api.get<ApiResponse<MenuProfile[]>>('/api/v1/admin/menu-profiles').then(r => r.data.data ?? []),
+  getResolved: () => api.get<ApiResponse<ResolvedMenuProfile>>('/api/v1/admin/menu-profiles/resolved').then(r => r.data.data!),
   get: (code: string) => api.get<ApiResponse<MenuProfile>>(`/api/v1/admin/menu-profiles/${code}`).then(r => r.data.data!),
   create: (data: { code: string; name: string; description?: string; menuItems?: { menuCode: string; sortOrder: number; visible: boolean }[] }) =>
     api.post<ApiResponse<MenuProfile>>('/api/v1/admin/menu-profiles', data).then(r => r.data.data!),

@@ -14,9 +14,22 @@ interface GoodsReceiptRepository : JpaRepository<GoodsReceipt, Long> {
         SELECT gr FROM GoodsReceipt gr WHERE gr.tenantId = :tenantId AND gr.active = true
         AND (:status IS NULL OR gr.status = :status)
         AND (:documentNo IS NULL OR gr.documentNo LIKE %:documentNo%)
+        AND (:applyCompanyScope = false OR gr.companyCode IN :companyCodes)
+        AND (:applyPlantScope = false OR gr.plantCode IN :plantCodes)
+        AND (:createdBy IS NULL OR gr.createdBy = :createdBy)
         ORDER BY gr.createdAt DESC
     """)
-    fun search(tenantId: String, status: GrStatus?, documentNo: String?, pageable: Pageable): Page<GoodsReceipt>
+    fun search(
+        tenantId: String,
+        status: GrStatus?,
+        documentNo: String?,
+        applyCompanyScope: Boolean,
+        companyCodes: Collection<String>,
+        applyPlantScope: Boolean,
+        plantCodes: Collection<String>,
+        createdBy: String?,
+        pageable: Pageable
+    ): Page<GoodsReceipt>
 }
 
 interface GoodsIssueRepository : JpaRepository<GoodsIssue, Long> {
@@ -26,9 +39,22 @@ interface GoodsIssueRepository : JpaRepository<GoodsIssue, Long> {
         SELECT gi FROM GoodsIssue gi WHERE gi.tenantId = :tenantId AND gi.active = true
         AND (:status IS NULL OR gi.status = :status)
         AND (:documentNo IS NULL OR gi.documentNo LIKE %:documentNo%)
+        AND (:applyCompanyScope = false OR gi.companyCode IN :companyCodes)
+        AND (:applyPlantScope = false OR gi.plantCode IN :plantCodes)
+        AND (:createdBy IS NULL OR gi.createdBy = :createdBy)
         ORDER BY gi.createdAt DESC
     """)
-    fun search(tenantId: String, status: GiStatus?, documentNo: String?, pageable: Pageable): Page<GoodsIssue>
+    fun search(
+        tenantId: String,
+        status: GiStatus?,
+        documentNo: String?,
+        applyCompanyScope: Boolean,
+        companyCodes: Collection<String>,
+        applyPlantScope: Boolean,
+        plantCodes: Collection<String>,
+        createdBy: String?,
+        pageable: Pageable
+    ): Page<GoodsIssue>
 }
 
 interface StockSummaryRepository : JpaRepository<StockSummary, Long> {
@@ -41,7 +67,15 @@ interface StockSummaryRepository : JpaRepository<StockSummary, Long> {
         SELECT s FROM StockSummary s WHERE s.tenantId = :tenantId AND s.active = true
         AND (:plantCode IS NULL OR s.plantCode = :plantCode)
         AND (:itemCode IS NULL OR s.itemCode LIKE %:itemCode%)
+        AND (:applyPlantScope = false OR s.plantCode IN :plantCodes)
         ORDER BY s.itemCode
     """)
-    fun search(tenantId: String, plantCode: String?, itemCode: String?, pageable: Pageable): Page<StockSummary>
+    fun search(
+        tenantId: String,
+        plantCode: String?,
+        itemCode: String?,
+        applyPlantScope: Boolean,
+        plantCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<StockSummary>
 }

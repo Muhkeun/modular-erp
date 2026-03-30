@@ -5,42 +5,25 @@ import type { ColDef } from "ag-grid-community";
 import { Plus, ArrowLeft, Save, Trash2, CheckCircle } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
-import api from "../../../shared/api/client";
+import { logisticsApi, type CreateGoodsIssueRequest, type GiType, type GoodsIssue, type GoodsIssueLineInput } from "../../../shared/api/logisticsApi";
+import { useDataScope } from "../../../shared/hooks/useDataScope";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { filterRowsByDataScope } from "../../../shared/utils/dataScope";
 
 /* ── Types ── */
-interface GiLine {
-  id?: number;
-  itemCode: string;
-  itemName: string;
-  quantity: number;
-  unitOfMeasure: string;
-  storageLocation: string;
-}
+type GiLine = GoodsIssueLineInput & { id?: number; storageLocation: string };
 
-interface GiHeader {
+interface GiHeader extends Omit<CreateGoodsIssueRequest, "referenceDocNo" | "remark" | "issueType" | "lines"> {
   id?: number;
   documentNo?: string;
-  companyCode: string;
-  plantCode: string;
-  storageLocation: string;
   issueType: string;
   referenceDocNo: string;
-  issueDate: string;
   remark: string;
   status?: string;
   lines: GiLine[];
 }
 
-interface GiRow {
-  id: number;
-  documentNo: string;
-  issueType: string;
-  referenceDocNo: string | null;
-  plantCode: string;
-  storageLocation: string;
-  issueDate: string;
-  status: string;
-}
+type GiRow = GoodsIssue;
 
 const ISSUE_TYPES = ["SALES", "TRANSFER", "PRODUCTION", "SCRAP", "RETURN"] as const;
 
@@ -73,6 +56,8 @@ const defaultHeader = (): GiHeader => ({
 export default function GoodsIssuePage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const { userId } = useAuth();
+  const dataScope = useDataScope("goods-issues");
   const [mode, setMode] = useState<"list" | "create" | "detail">("list");
   const [form, setForm] = useState<GiHeader>(defaultHeader());
   const [detail, setDetail] = useState<GiHeader | null>(null);
@@ -80,13 +65,13 @@ export default function GoodsIssuePage() {
   /* ── Queries ── */
   const { data, isLoading } = useQuery({
     queryKey: ["goods-issues"],
-    queryFn: async () => (await api.get("/api/v1/logistics/goods-issues?size=100")).data,
+    queryFn: () => logisticsApi.getGoodsIssues({ size: 100 }),
     enabled: mode === "list",
   });
 
   /* ── Mutations ── */
   const saveMutation = useMutation({
-    mutationFn: async (payload: GiHeader) => (await api.post("/api/v1/logistics/goods-issues", payload)).data,
+    mutationFn: (payload: GiHeader) => logisticsApi.createGoodsIssue({ ...payload, issueType: payload.issueType as GiType }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["goods-issues"] });
       setMode("list");
@@ -94,7 +79,7 @@ export default function GoodsIssuePage() {
   });
 
   const confirmMutation = useMutation({
-    mutationFn: async (id: number) => (await api.post(`/api/v1/logistics/goods-issues/${id}/confirm`)).data,
+    mutationFn: (id: number) => logisticsApi.confirmGoodsIssue(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["goods-issues"] });
       setMode("list");
@@ -108,8 +93,13 @@ export default function GoodsIssuePage() {
   }, []);
 
   const openDetail = useCallback(async (row: GiRow) => {
-    const res = await api.get(`/api/v1/logistics/goods-issues/${row.id}`);
-    setDetail(res.data.data ?? res.data);
+    const result = await logisticsApi.getGoodsIssue(row.id);
+    setDetail({
+      ...result,
+      issueType: result.issueType,
+      referenceDocNo: result.referenceDocNo ?? "",
+      remark: result.remark ?? "",
+    });
     setMode("detail");
   }, []);
 
@@ -175,6 +165,17 @@ export default function GoodsIssuePage() {
     ],
     [t]
   );
+  const allRows = useMemo<GiRow[]>(() => data?.data ?? [], [data]);
+  const visibleRows = useMemo(
+    () =>
+      filterRowsByDataScope(allRows, dataScope.scope, {
+        userId,
+        getOwnerId: (row) => row.createdBy,
+        getCompanyCode: (row) => row.companyCode,
+        getPlantCode: (row) => row.plantCode,
+      }),
+    [allRows, dataScope.scope, userId]
+  );
 
   /* ── LIST VIEW ── */
   if (mode === "list") {
@@ -192,9 +193,10 @@ export default function GoodsIssuePage() {
         />
         <div className="card overflow-hidden">
           <DataGrid<GiRow>
-            rowData={data?.data || []}
+            gridId="goods-issues.list"
+            rowData={visibleRows}
             columnDefs={columnDefs}
-            loading={isLoading}
+            loading={isLoading || dataScope.isLoading}
             onRowClicked={openDetail}
           />
         </div>

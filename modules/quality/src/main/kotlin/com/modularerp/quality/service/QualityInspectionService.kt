@@ -1,5 +1,6 @@
 package com.modularerp.quality.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.core.exception.EntityNotFoundException
 import com.modularerp.document.service.DocumentNumberGenerator
 import com.modularerp.quality.domain.*
@@ -19,8 +20,20 @@ class QualityInspectionService(
 ) {
     fun getById(id: Long) = find(id).toResponse()
 
-    fun search(status: QiStatus?, type: InspectionType?, pageable: Pageable): Page<QiResponse> =
-        qiRepository.search(TenantContext.getTenantId(), status, type, pageable).map { it.toResponse() }
+    fun search(
+        status: QiStatus?,
+        type: InspectionType?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<QiResponse> =
+        qiRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            status = status,
+            inspectionType = type,
+            applyPlantScope = scopeFilter.plantCodes.isNotEmpty(),
+            plantCodes = scopeFilter.scopedPlantCodes(),
+            pageable = pageable
+        ).map { it.toResponse() }
 
     @Transactional
     fun create(req: CreateQiRequest): QiResponse {

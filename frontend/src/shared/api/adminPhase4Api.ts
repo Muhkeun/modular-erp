@@ -27,6 +27,31 @@ export interface Workflow {
   designerLayout: string | null;
 }
 
+export interface WorkflowStepInput {
+  stepOrder: number;
+  name: string;
+  stepType: WorkflowStepType;
+  approverType: ApproverType;
+  approverValue: string;
+  condition?: string | null;
+  autoApproveHours?: number;
+}
+
+export interface CreateWorkflowRequest {
+  documentType: string;
+  name: string;
+  description?: string | null;
+  steps?: WorkflowStepInput[];
+  designerLayout?: string | null;
+}
+
+export interface UpdateWorkflowRequest {
+  name: string;
+  description?: string | null;
+  steps?: WorkflowStepInput[];
+  designerLayout?: string | null;
+}
+
 // ── Tenant Types ──
 
 export type TenantPlan = 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
@@ -44,6 +69,22 @@ export interface Tenant {
   currentUsers: number;
   activatedAt: string | null;
   createdAt: string;
+}
+
+export interface CreateTenantRequest {
+  tenantId: string;
+  name: string;
+  description?: string | null;
+  plan?: TenantPlan;
+  maxUsers?: number;
+  maxStorageMb?: number;
+}
+
+export interface UpdateTenantRequest {
+  name: string;
+  description?: string | null;
+  maxUsers?: number;
+  maxStorageMb?: number;
 }
 
 // ── ApiKey Types ──
@@ -71,13 +112,40 @@ export interface ApiKeyCreateResult {
   expiresAt: string | null;
 }
 
+export interface CreateApiKeyRequest {
+  name: string;
+  description?: string | null;
+  allowedResources?: string | null;
+  rateLimit?: number | null;
+  expiresAt?: string | null;
+}
+
+export interface UpdateApiKeyRequest {
+  name: string;
+  description?: string | null;
+  allowedResources?: string | null;
+  rateLimit?: number | null;
+}
+
+export type DataScopeType = 'ALL' | 'OWN' | 'ORGANIZATION' | 'DEPARTMENT' | 'PLANT';
+
+export interface ResolvedDataScope {
+  type: DataScopeType;
+  values: string[];
+  ownUserId?: string | null;
+  companyCodes?: string[];
+  departmentCodes?: string[];
+  plantCodes?: string[];
+  denyAll?: boolean;
+}
+
 // ── APIs ──
 
 export const workflowApi = {
   getAll: () => api.get<ApiResponse<Workflow[]>>('/api/v1/admin/workflows').then(r => r.data.data ?? []),
   get: (id: number) => api.get<ApiResponse<Workflow>>(`/api/v1/admin/workflows/${id}`).then(r => r.data.data!),
-  create: (data: any) => api.post<ApiResponse<Workflow>>('/api/v1/admin/workflows', data).then(r => r.data.data!),
-  update: (id: number, data: any) => api.put<ApiResponse<Workflow>>(`/api/v1/admin/workflows/${id}`, data).then(r => r.data.data!),
+  create: (data: CreateWorkflowRequest) => api.post<ApiResponse<Workflow>>('/api/v1/admin/workflows', data).then(r => r.data.data!),
+  update: (id: number, data: UpdateWorkflowRequest) => api.put<ApiResponse<Workflow>>(`/api/v1/admin/workflows/${id}`, data).then(r => r.data.data!),
   activate: (id: number) => api.post<ApiResponse<Workflow>>(`/api/v1/admin/workflows/${id}/activate`).then(r => r.data.data!),
   delete: (id: number) => api.delete(`/api/v1/admin/workflows/${id}`),
 };
@@ -85,15 +153,22 @@ export const workflowApi = {
 export const tenantApi = {
   getAll: () => api.get<ApiResponse<Tenant[]>>('/api/v1/admin/tenants').then(r => r.data.data ?? []),
   get: (tenantId: string) => api.get<ApiResponse<Tenant>>(`/api/v1/admin/tenants/${tenantId}`).then(r => r.data.data!),
-  create: (data: any) => api.post<ApiResponse<Tenant>>('/api/v1/admin/tenants', data).then(r => r.data.data!),
-  update: (tenantId: string, data: any) => api.put<ApiResponse<Tenant>>(`/api/v1/admin/tenants/${tenantId}`, data).then(r => r.data.data!),
+  create: (data: CreateTenantRequest) => api.post<ApiResponse<Tenant>>('/api/v1/admin/tenants', data).then(r => r.data.data!),
+  update: (tenantId: string, data: UpdateTenantRequest) => api.put<ApiResponse<Tenant>>(`/api/v1/admin/tenants/${tenantId}`, data).then(r => r.data.data!),
   suspend: (tenantId: string) => api.post(`/api/v1/admin/tenants/${tenantId}/suspend`),
   activate: (tenantId: string) => api.post(`/api/v1/admin/tenants/${tenantId}/activate`),
 };
 
 export const apiKeyApi = {
   getAll: () => api.get<ApiResponse<ApiKeyInfo[]>>('/api/v1/admin/api-keys').then(r => r.data.data ?? []),
-  create: (data: any) => api.post<ApiResponse<ApiKeyCreateResult>>('/api/v1/admin/api-keys', data).then(r => r.data.data!),
-  update: (id: number, data: any) => api.put<ApiResponse<ApiKeyInfo>>(`/api/v1/admin/api-keys/${id}`, data).then(r => r.data.data!),
+  create: (data: CreateApiKeyRequest) => api.post<ApiResponse<ApiKeyCreateResult>>('/api/v1/admin/api-keys', data).then(r => r.data.data!),
+  update: (id: number, data: UpdateApiKeyRequest) => api.put<ApiResponse<ApiKeyInfo>>(`/api/v1/admin/api-keys/${id}`, data).then(r => r.data.data!),
   revoke: (id: number) => api.delete(`/api/v1/admin/api-keys/${id}`),
+};
+
+export const dataScopeApi = {
+  resolve: (roles: string[], resource: string) =>
+    api.get<ApiResponse<ResolvedDataScope>>('/api/v1/admin/data-scopes/resolved', {
+      params: { roles: roles.join(','), resource },
+    }).then(r => r.data.data!),
 };

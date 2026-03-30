@@ -15,10 +15,18 @@ interface CustomerRepository : JpaRepository<Customer, Long> {
         AND (:status IS NULL OR c.status = :status)
         AND (:customerCode IS NULL OR c.customerCode LIKE %:customerCode%)
         AND (:customerName IS NULL OR c.customerName LIKE %:customerName%)
+        AND (:applyOwnScope = false OR c.assignedTo = :ownUserId)
         ORDER BY c.createdAt DESC
     """)
-    fun search(tenantId: String, status: CustomerStatus?, customerCode: String?,
-               customerName: String?, pageable: Pageable): Page<Customer>
+    fun search(
+        tenantId: String,
+        status: CustomerStatus?,
+        customerCode: String?,
+        customerName: String?,
+        applyOwnScope: Boolean,
+        ownUserId: String,
+        pageable: Pageable
+    ): Page<Customer>
 }
 
 interface LeadRepository : JpaRepository<Lead, Long> {
@@ -29,10 +37,18 @@ interface LeadRepository : JpaRepository<Lead, Long> {
         AND (:status IS NULL OR l.status = :status)
         AND (:source IS NULL OR l.source = :source)
         AND (:leadNo IS NULL OR l.leadNo LIKE %:leadNo%)
+        AND (:applyOwnScope = false OR l.assignedTo = :ownUserId)
         ORDER BY l.createdAt DESC
     """)
-    fun search(tenantId: String, status: LeadStatus?, source: LeadSource?,
-               leadNo: String?, pageable: Pageable): Page<Lead>
+    fun search(
+        tenantId: String,
+        status: LeadStatus?,
+        source: LeadSource?,
+        leadNo: String?,
+        applyOwnScope: Boolean,
+        ownUserId: String,
+        pageable: Pageable
+    ): Page<Lead>
 }
 
 interface OpportunityRepository : JpaRepository<Opportunity, Long> {
@@ -42,18 +58,26 @@ interface OpportunityRepository : JpaRepository<Opportunity, Long> {
         SELECT o FROM Opportunity o WHERE o.tenantId = :tenantId AND o.active = true
         AND (:stage IS NULL OR o.stage = :stage)
         AND (:assignedTo IS NULL OR o.assignedTo = :assignedTo)
+        AND (:applyOwnScope = false OR o.assignedTo = :ownUserId)
         ORDER BY o.createdAt DESC
     """)
-    fun search(tenantId: String, stage: OpportunityStage?, assignedTo: String?,
-               pageable: Pageable): Page<Opportunity>
+    fun search(
+        tenantId: String,
+        stage: OpportunityStage?,
+        assignedTo: String?,
+        applyOwnScope: Boolean,
+        ownUserId: String,
+        pageable: Pageable
+    ): Page<Opportunity>
 
     @Query("""
         SELECT o.stage, COUNT(o), SUM(o.expectedAmount)
         FROM Opportunity o WHERE o.tenantId = :tenantId AND o.active = true
         AND o.stage NOT IN ('CLOSED_WON', 'CLOSED_LOST')
+        AND (:applyOwnScope = false OR o.assignedTo = :ownUserId)
         GROUP BY o.stage ORDER BY o.stage
     """)
-    fun getPipelineSummary(tenantId: String): List<Array<Any>>
+    fun getPipelineSummary(tenantId: String, applyOwnScope: Boolean, ownUserId: String): List<Array<Any>>
 
     fun findByTenantIdAndCustomerIdAndActiveTrue(tenantId: String, customerId: Long): List<Opportunity>
 }
@@ -65,10 +89,17 @@ interface ActivityRepository : JpaRepository<Activity, Long> {
         SELECT a FROM Activity a WHERE a.tenantId = :tenantId AND a.active = true
         AND (:referenceType IS NULL OR a.referenceType = :referenceType)
         AND (:referenceId IS NULL OR a.referenceId = :referenceId)
+        AND (:applyOwnScope = false OR a.assignedTo = :ownUserId)
         ORDER BY a.activityDate DESC
     """)
-    fun search(tenantId: String, referenceType: String?, referenceId: Long?,
-               pageable: Pageable): Page<Activity>
+    fun search(
+        tenantId: String,
+        referenceType: String?,
+        referenceId: Long?,
+        applyOwnScope: Boolean,
+        ownUserId: String,
+        pageable: Pageable
+    ): Page<Activity>
 
     fun findByTenantIdAndReferenceTypeAndReferenceIdAndActiveTrue(
         tenantId: String, referenceType: String, referenceId: Long): List<Activity>

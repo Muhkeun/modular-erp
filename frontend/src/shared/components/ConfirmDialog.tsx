@@ -1,19 +1,8 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { useState, useCallback, useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle } from "lucide-react";
 import { clsx } from "clsx";
-
-interface ConfirmOptions {
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  variant?: "default" | "danger";
-}
-
-type ConfirmFn = (options: ConfirmOptions) => Promise<boolean>;
-
-const ConfirmContext = createContext<ConfirmFn | null>(null);
+import { ConfirmContext, type ConfirmFn, type ConfirmOptions } from "./confirmContext";
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<{
@@ -90,10 +79,4 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         )}
     </ConfirmContext.Provider>
   );
-}
-
-export function useConfirm(): ConfirmFn {
-  const ctx = useContext(ConfirmContext);
-  if (!ctx) throw new Error("useConfirm must be used within ConfirmProvider");
-  return ctx;
 }

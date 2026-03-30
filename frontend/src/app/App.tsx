@@ -1,11 +1,16 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { useAuth } from "../shared/hooks/useAuth";
 import MainLayout from "./MainLayout";
 import LoginPage from "./LoginPage";
 import { ToastProvider } from "../shared/components/Toast";
 import { ConfirmProvider } from "../shared/components/ConfirmDialog";
 import FullPageLoader from "../shared/components/FullPageLoader";
+import { usePreferenceStore } from "../shared/hooks/usePreference";
+import ProtectedRoute from "../shared/components/ProtectedRoute";
+import AccessDenied from "../shared/components/AccessDenied";
+import { useMenuProfile } from "../shared/hooks/useMenuProfile";
+import { findFirstAccessiblePath } from "../shared/navigation";
 
 // Lazy-loaded pages
 const DashboardPage = lazy(() => import("../modules/dashboard/pages/DashboardPage"));
@@ -50,9 +55,20 @@ const ApiKeyPage = lazy(() => import("../modules/admin/pages/ApiKeyPage"));
 const AiChatPage = lazy(() => import("../modules/ai/pages/AiChatPage"));
 
 export default function App() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userId, tenantId } = useAuth();
+  const loadPreferences = usePreferenceStore((state) => state.load);
+  const menuProfile = useMenuProfile();
+
+  useEffect(() => {
+    if (!isAuthenticated || !userId || !tenantId) return;
+    void loadPreferences();
+  }, [isAuthenticated, userId, tenantId, loadPreferences]);
 
   if (!isAuthenticated) return <LoginPage />;
+
+  const homePath = menuProfile.isResolved
+    ? findFirstAccessiblePath(menuProfile.visibleMenuCodes) ?? "/settings"
+    : null;
 
   return (
     <ToastProvider>
@@ -60,82 +76,82 @@ export default function App() {
     <Suspense fallback={<FullPageLoader />}>
       <Routes>
         <Route element={<MainLayout />}>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/" element={homePath ? <Navigate to={homePath} replace /> : <FullPageLoader />} />
+          <Route path="/dashboard" element={<ProtectedRoute menuCode="dashboard"><DashboardPage /></ProtectedRoute>} />
 
           {/* Master Data */}
-          <Route path="/master-data/items" element={<ItemListPage />} />
-          <Route path="/master-data/items/new" element={<ItemFormPage />} />
-          <Route path="/master-data/items/:id" element={<ItemFormPage />} />
+          <Route path="/master-data/items" element={<ProtectedRoute menuCode="master-data.items"><ItemListPage /></ProtectedRoute>} />
+          <Route path="/master-data/items/new" element={<ProtectedRoute menuCode="master-data.items"><ItemFormPage /></ProtectedRoute>} />
+          <Route path="/master-data/items/:id" element={<ProtectedRoute menuCode="master-data.items"><ItemFormPage /></ProtectedRoute>} />
 
           {/* Purchase */}
-          <Route path="/purchase/requests" element={<PurchaseRequestPage />} />
-          <Route path="/purchase/orders" element={<PurchaseOrderPage />} />
+          <Route path="/purchase/requests" element={<ProtectedRoute menuCode="purchase.requests"><PurchaseRequestPage /></ProtectedRoute>} />
+          <Route path="/purchase/orders" element={<ProtectedRoute menuCode="purchase.orders"><PurchaseOrderPage /></ProtectedRoute>} />
 
           {/* Production */}
-          <Route path="/production/work-orders" element={<WorkOrderPage />} />
-          <Route path="/production/work-orders/:id" element={<WorkOrderDetailPage />} />
+          <Route path="/production/work-orders" element={<ProtectedRoute menuCode="production.work-orders"><WorkOrderPage /></ProtectedRoute>} />
+          <Route path="/production/work-orders/:id" element={<ProtectedRoute menuCode="production.work-orders"><WorkOrderDetailPage /></ProtectedRoute>} />
 
           {/* Logistics */}
-          <Route path="/logistics/gr" element={<GoodsReceiptPage />} />
-          <Route path="/logistics/gi" element={<GoodsIssuePage />} />
-          <Route path="/logistics/stock" element={<StockOverviewPage />} />
+          <Route path="/logistics/gr" element={<ProtectedRoute menuCode="logistics.gr"><GoodsReceiptPage /></ProtectedRoute>} />
+          <Route path="/logistics/gi" element={<ProtectedRoute menuCode="logistics.gi"><GoodsIssuePage /></ProtectedRoute>} />
+          <Route path="/logistics/stock" element={<ProtectedRoute menuCode="logistics.stock"><StockOverviewPage /></ProtectedRoute>} />
 
           {/* Planning */}
-          <Route path="/planning/mrp" element={<MrpPage />} />
+          <Route path="/planning/mrp" element={<ProtectedRoute menuCode="planning.mrp"><MrpPage /></ProtectedRoute>} />
 
           {/* Sales */}
-          <Route path="/sales/orders" element={<SalesOrderPage />} />
+          <Route path="/sales/orders" element={<ProtectedRoute menuCode="sales.orders"><SalesOrderPage /></ProtectedRoute>} />
 
           {/* Finance */}
-          <Route path="/account/journal" element={<JournalEntryPage />} />
+          <Route path="/account/journal" element={<ProtectedRoute menuCode="finance.journal"><JournalEntryPage /></ProtectedRoute>} />
 
           {/* HR */}
-          <Route path="/hr" element={<EmployeePage />} />
+          <Route path="/hr" element={<ProtectedRoute menuCode="hr"><EmployeePage /></ProtectedRoute>} />
 
           {/* Budget */}
-          <Route path="/finance/budget" element={<BudgetPage />} />
+          <Route path="/finance/budget" element={<ProtectedRoute menuCode="finance.budget"><BudgetPage /></ProtectedRoute>} />
 
           {/* Asset */}
-          <Route path="/finance/assets" element={<AssetPage />} />
+          <Route path="/finance/assets" element={<ProtectedRoute menuCode="finance.assets"><AssetPage /></ProtectedRoute>} />
 
           {/* Period Close */}
-          <Route path="/finance/period-close" element={<PeriodClosePage />} />
+          <Route path="/finance/period-close" element={<ProtectedRoute menuCode="finance.period-close"><PeriodClosePage /></ProtectedRoute>} />
 
           {/* Costing */}
-          <Route path="/costing" element={<CostingPage />} />
+          <Route path="/costing" element={<ProtectedRoute menuCode="costing.main"><CostingPage /></ProtectedRoute>} />
 
           {/* Currency */}
-          <Route path="/finance/currency" element={<CurrencyPage />} />
+          <Route path="/finance/currency" element={<ProtectedRoute menuCode="finance.currency"><CurrencyPage /></ProtectedRoute>} />
 
           {/* CRM */}
-          <Route path="/crm" element={<CrmPage />} />
+          <Route path="/crm" element={<ProtectedRoute menuCode="crm.main"><CrmPage /></ProtectedRoute>} />
 
           {/* Batch */}
-          <Route path="/admin/batch" element={<BatchPage />} />
+          <Route path="/admin/batch" element={<ProtectedRoute menuCode="admin.batch"><BatchPage /></ProtectedRoute>} />
 
           {/* Approval */}
-          <Route path="/approvals" element={<ApprovalInboxPage />} />
+          <Route path="/approvals" element={<ProtectedRoute menuCode="approvals"><ApprovalInboxPage /></ProtectedRoute>} />
 
           {/* Notification */}
-          <Route path="/notifications" element={<NotificationPage />} />
+          <Route path="/notifications" element={<ProtectedRoute menuCode="notifications"><NotificationPage /></ProtectedRoute>} />
 
           {/* Settings */}
           <Route path="/settings" element={<SettingsPage />} />
 
           {/* Admin */}
-          <Route path="/admin/roles" element={<RoleManagementPage />} />
-          <Route path="/admin/system-codes" element={<SystemCodePage />} />
-          <Route path="/admin/organizations" element={<OrganizationPage />} />
-          <Route path="/admin/audit-logs" element={<AuditLogPage />} />
-          <Route path="/admin/workflows" element={<WorkflowDesignerPage />} />
-          <Route path="/admin/tenants" element={<TenantManagementPage />} />
-          <Route path="/admin/api-keys" element={<ApiKeyPage />} />
+          <Route path="/admin/roles" element={<ProtectedRoute menuCode="admin.roles"><RoleManagementPage /></ProtectedRoute>} />
+          <Route path="/admin/system-codes" element={<ProtectedRoute menuCode="admin.system-codes"><SystemCodePage /></ProtectedRoute>} />
+          <Route path="/admin/organizations" element={<ProtectedRoute menuCode="admin.organizations"><OrganizationPage /></ProtectedRoute>} />
+          <Route path="/admin/audit-logs" element={<ProtectedRoute menuCode="admin.audit-logs"><AuditLogPage /></ProtectedRoute>} />
+          <Route path="/admin/workflows" element={<ProtectedRoute menuCode="admin.workflows"><WorkflowDesignerPage /></ProtectedRoute>} />
+          <Route path="/admin/tenants" element={<ProtectedRoute menuCode="admin.tenants"><TenantManagementPage /></ProtectedRoute>} />
+          <Route path="/admin/api-keys" element={<ProtectedRoute menuCode="admin.api-keys"><ApiKeyPage /></ProtectedRoute>} />
 
           {/* AI */}
-          <Route path="/ai-chat" element={<AiChatPage />} />
+          <Route path="/ai-chat" element={<ProtectedRoute menuCode="ai-chat"><AiChatPage /></ProtectedRoute>} />
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<AccessDenied description="Route not found or not included in your menu profile." />} />
       </Routes>
     </Suspense>
     </ConfirmProvider>

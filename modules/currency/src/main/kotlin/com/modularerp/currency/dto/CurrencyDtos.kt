@@ -70,6 +70,7 @@ data class ConvertResponse(
 // ── Revaluation DTOs ──
 
 data class CreateRevaluationRequest(
+    @field:NotBlank val companyCode: String,
     val revaluationDate: LocalDate = LocalDate.now(),
     val fiscalYear: Int,
     val period: Int,
@@ -81,7 +82,7 @@ data class CreateRevaluationRequest(
 )
 
 data class RevaluationResponse(
-    val id: Long, val documentNo: String, val revaluationDate: LocalDate,
+    val id: Long, val documentNo: String, val companyCode: String?, val revaluationDate: LocalDate,
     val fiscalYear: Int, val period: Int, val fromCurrency: String, val toCurrency: String,
     val originalRate: BigDecimal, val revaluationRate: BigDecimal,
     val unrealizedGainLoss: BigDecimal, val status: RevaluationStatus,
@@ -89,7 +90,7 @@ data class RevaluationResponse(
 )
 
 fun CurrencyRevaluation.toResponse() = RevaluationResponse(
-    id = id, documentNo = documentNo, revaluationDate = revaluationDate,
+    id = id, documentNo = documentNo, companyCode = companyCode, revaluationDate = revaluationDate,
     fiscalYear = fiscalYear, period = period, fromCurrency = fromCurrency,
     toCurrency = toCurrency, originalRate = originalRate, revaluationRate = revaluationRate,
     unrealizedGainLoss = unrealizedGainLoss, status = status,

@@ -19,10 +19,13 @@ import java.time.LocalDate
  * - PR 1건에서 여러 PO로 분할 전환 가능 (부분 전환)
  */
 @Entity
-@Table(name = "purchase_requests")
+@Table(
+    name = "purchase_requests",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["tenant_id", "document_no"])]
+)
 class PurchaseRequest(
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, length = 30)
     var documentNo: String = "",
 
     @Column(nullable = false, length = 20)

@@ -19,10 +19,13 @@ import java.time.LocalDate
  * - 취소 시 확정 전/후 모두 가능 (확정 후 취소 시 재고 차감 필요)
  */
 @Entity
-@Table(name = "goods_receipts")
+@Table(
+    name = "goods_receipts",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["tenant_id", "document_no"])]
+)
 class GoodsReceipt(
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, length = 30)
     var documentNo: String = "",
 
     @Column(nullable = false, length = 20)

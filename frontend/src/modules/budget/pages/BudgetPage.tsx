@@ -5,7 +5,7 @@ import type { ColDef } from "ag-grid-community";
 import { Plus, ArrowLeft, ArrowRightLeft } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
-import api from "../../../shared/api/client";
+import { budgetApi } from "../../../shared/api/budgetApi";
 
 interface BudgetPeriod {
   id: number;
@@ -59,28 +59,28 @@ export default function BudgetPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["budget-periods"],
-    queryFn: async () => (await api.get("/api/v1/budget/periods?size=100")).data,
+    queryFn: async () => (await budgetApi.getPeriods()).data,
   });
 
   const detailQuery = useQuery({
     queryKey: ["budget-period", selected?.id],
-    queryFn: async () => (await api.get(`/api/v1/budget/periods/${selected!.id}`)).data,
+    queryFn: async () => (await budgetApi.getPeriod(selected!.id)).data,
     enabled: mode === "detail" && !!selected?.id,
   });
 
   const itemsQuery = useQuery({
     queryKey: ["budget-items", selected?.id],
-    queryFn: async () => (await api.get(`/api/v1/budget/periods/${selected!.id}/items?size=200`)).data,
+    queryFn: async () => (await budgetApi.getItems(selected!.id)).data,
     enabled: mode === "detail" && !!selected?.id,
   });
 
   const createMut = useMutation({
-    mutationFn: async (body: Record<string, unknown>) => (await api.post("/api/v1/budget/periods", body)).data,
+    mutationFn: async (body: Record<string, unknown>) => (await budgetApi.createPeriod(body)).data,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["budget-periods"] }); setMode("list"); },
   });
 
   const approveMut = useMutation({
-    mutationFn: async (id: number) => (await api.post(`/api/v1/budget/periods/${id}/approve`)).data,
+    mutationFn: async (id: number) => (await budgetApi.approvePeriod(id)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["budget-periods"] });
       qc.invalidateQueries({ queryKey: ["budget-period", selected?.id] });
@@ -88,7 +88,7 @@ export default function BudgetPage() {
   });
 
   const closeMut = useMutation({
-    mutationFn: async (id: number) => (await api.post(`/api/v1/budget/periods/${id}/close`)).data,
+    mutationFn: async (id: number) => (await budgetApi.closePeriod(id)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["budget-periods"] });
       qc.invalidateQueries({ queryKey: ["budget-period", selected?.id] });
@@ -96,7 +96,7 @@ export default function BudgetPage() {
   });
 
   const transferMut = useMutation({
-    mutationFn: async (body: Record<string, unknown>) => (await api.post("/api/v1/budget/transfers", body)).data,
+    mutationFn: async (body: Record<string, unknown>) => (await budgetApi.transfer(body)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["budget-items", selected?.id] });
       setMode("detail");

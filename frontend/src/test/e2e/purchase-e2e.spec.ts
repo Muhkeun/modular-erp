@@ -2,8 +2,6 @@ import { test, expect } from "@playwright/test";
 import { login, waitForGrid } from "./helpers";
 
 test.describe.serial("Purchase Process", () => {
-  let createdDocNo: string | null = null;
-
   test("should create purchase request with line items", async ({ page }) => {
     await login(page);
     await page.goto("/purchase/requests");
@@ -62,11 +60,6 @@ test.describe.serial("Purchase Process", () => {
       await draftRow.click();
       await page.waitForLoadState("networkidle");
 
-      // Save doc number for later tests
-      const headerText = await page.getByTestId("page-header").textContent();
-      const match = headerText?.match(/PR-\d+/);
-      if (match) createdDocNo = match[0];
-
       // Click submit button
       const submitButton = page.getByRole("button", { name: /submit|제출/i });
       if (await submitButton.isVisible()) {
@@ -116,7 +109,6 @@ test.describe.serial("Purchase Process", () => {
         await page.waitForTimeout(500);
 
         // Vendor dialog should appear — click convert
-        const dialogConvertButton = page.locator(".fixed").getByRole("button", { name: /발주 전환|convert/i });
         // Note: vendor selection is required, but test may proceed if vendor is pre-selected
       }
     }

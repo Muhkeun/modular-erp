@@ -1,22 +1,31 @@
 package com.modularerp.currency.controller
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
+import com.modularerp.admin.service.DataScopeService
+import com.modularerp.core.exception.ForbiddenException
 import com.modularerp.currency.domain.*
 import com.modularerp.currency.dto.*
 import com.modularerp.currency.service.CurrencyService
+import com.modularerp.security.tenant.TenantContext
 import com.modularerp.web.dto.ApiResponse
 import com.modularerp.web.dto.PageMeta
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.http.HttpStatus
+import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.*
 import java.time.LocalDate
 
 @RestController
 @RequestMapping("/api/v1/currencies")
 @Tag(name = "Multi-Currency")
-class CurrencyController(private val currencyService: CurrencyService) {
+class CurrencyController(
+    private val currencyService: CurrencyService,
+    private val dataScopeService: DataScopeService
+) {
 
     // ── Currencies ──
 
@@ -68,22 +77,77 @@ class CurrencyController(private val currencyService: CurrencyService) {
     // ── Revaluations ──
 
     @GetMapping("/revaluations")
-    fun searchRevaluations(@RequestParam(required = false) status: RevaluationStatus?,
-                           @RequestParam(required = false) fiscalYear: Int?,
-                           @PageableDefault(size = 20) pageable: Pageable): ApiResponse<List<RevaluationResponse>> {
-        val page = currencyService.searchRevaluations(status, fiscalYear, pageable)
+    fun searchRevaluations(
+        @RequestParam(required = false) status: RevaluationStatus?,
+        @RequestParam(required = false) fiscalYear: Int?,
+        authentication: Authentication,
+        @PageableDefault(size = 20) pageable: Pageable
+    ): ApiResponse<List<RevaluationResponse>> {
+        val scopeFilter = resolveRevaluationScope(authentication)
+        val page =
+            if (scopeFilter.denyAll) Page.empty(pageable)
+            else currencyService.searchRevaluations(status, fiscalYear, scopeFilter, pageable)
         return ApiResponse.ok(page.content, PageMeta(page.number, page.size, page.totalElements, page.totalPages))
     }
 
     @PostMapping("/revaluations") @ResponseStatus(HttpStatus.CREATED)
-    fun createRevaluation(@Valid @RequestBody req: CreateRevaluationRequest) =
-        ApiResponse.ok(currencyService.createRevaluation(req))
+    fun createRevaluation(
+        @Valid @RequestBody req: CreateRevaluationRequest,
+        authentication: Authentication
+    ): ApiResponse<RevaluationResponse> {
+        assertRevaluationWritable(authentication, req.companyCode)
+        return ApiResponse.ok(currencyService.createRevaluation(req))
+    }
 
     @PostMapping("/revaluations/{id}/post")
-    fun postRevaluation(@PathVariable id: Long) =
-        ApiResponse.ok(currencyService.postRevaluation(id, "system"))
+    fun postRevaluation(@PathVariable id: Long, authentication: Authentication): ApiResponse<RevaluationResponse> {
+        val revaluation = currencyService.getRevaluationById(id)
+        assertRevaluationAccessible(authentication, revaluation.companyCode)
+        return ApiResponse.ok(currencyService.postRevaluation(id, "system"))
+    }
 
     @PostMapping("/revaluations/{id}/reverse")
-    fun reverseRevaluation(@PathVariable id: Long) =
-        ApiResponse.ok(currencyService.reverseRevaluation(id))
+    fun reverseRevaluation(@PathVariable id: Long, authentication: Authentication): ApiResponse<RevaluationResponse> {
+        val revaluation = currencyService.getRevaluationById(id)
+        assertRevaluationAccessible(authentication, revaluation.companyCode)
+        return ApiResponse.ok(currencyService.reverseRevaluation(id))
+    }
+
+    private fun resolveRevaluationScope(authentication: Authentication): DataScopeSearchFilter =
+        dataScopeService.resolveSearchFilter(
+            authentication.authorities.map { it.authority.removePrefix("ROLE_") },
+            "currency-revaluations",
+            TenantContext.getUserId()
+        ).narrowToSupported(
+            supportsOwn = false,
+            supportsCompany = true,
+            supportsDepartment = false,
+            supportsPlant = false
+        )
+
+    private fun assertRevaluationAccessible(authentication: Authentication, companyCode: String?) {
+        val scopeFilter = resolveRevaluationScope(authentication)
+        if (!scopeFilter.matchesSupported(
+                companyCode = companyCode,
+                supportsOwn = false,
+                supportsCompany = true,
+                supportsDepartment = false,
+                supportsPlant = false
+            )) {
+            throw ForbiddenException("The current data scope does not allow access to this document")
+        }
+    }
+
+    private fun assertRevaluationWritable(authentication: Authentication, companyCode: String?) {
+        val scopeFilter = resolveRevaluationScope(authentication)
+        if (!scopeFilter.matchesSupported(
+                companyCode = companyCode,
+                supportsOwn = false,
+                supportsCompany = true,
+                supportsDepartment = false,
+                supportsPlant = false
+            )) {
+            throw ForbiddenException("The current data scope does not allow writing this document")
+        }
+    }
 }

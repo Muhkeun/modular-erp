@@ -10,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-191%20passed-brightgreen?style=flat-square)](#testing)
+[![Tests](https://img.shields.io/badge/Tests-240%20passed-brightgreen?style=flat-square)](#testing)
 
 ---
 
@@ -273,7 +273,7 @@ This starts PostgreSQL 16 and the full application with Flyway migrations.
 
 ModularERP has comprehensive test coverage across all layers.
 
-> **191 backend tests** | **15 frontend unit tests** | **46 E2E scenarios** — All passing, 0 failures
+> Verified on 2026-03-27: **225 backend tests** + **15 frontend unit tests** = **240 passing tests**
 
 ### Backend Tests
 

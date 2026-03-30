@@ -113,6 +113,7 @@ data class PoResponse(
     val documentNo: String,
     val companyCode: String,
     val plantCode: String,
+    val createdBy: String?,
     val vendorCode: String,
     val vendorName: String,
     val orderDate: LocalDate,
@@ -147,6 +148,7 @@ data class PoLineResponse(
 
 fun PurchaseOrder.toResponse() = PoResponse(
     id = id, documentNo = documentNo, companyCode = companyCode, plantCode = plantCode,
+    createdBy = createdBy,
     vendorCode = vendorCode, vendorName = vendorName, orderDate = orderDate,
     deliveryDate = deliveryDate, status = status, currencyCode = currencyCode,
     totalAmount = totalAmount, taxAmount = taxAmount, grandTotal = grandTotal,

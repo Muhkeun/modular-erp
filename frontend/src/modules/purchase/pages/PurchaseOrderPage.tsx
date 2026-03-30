@@ -15,6 +15,10 @@ import {
   VENDOR_OPTIONS,
 } from "../../../shared/data/lookups";
 import api, { type ApiResponse } from "../../../shared/api/client";
+import { purchaseApi } from "../../../shared/api/purchaseApi";
+import { useDataScope } from "../../../shared/hooks/useDataScope";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { filterRowsByDataScope } from "../../../shared/utils/dataScope";
 
 interface PoLine {
   id?: number;
@@ -32,6 +36,7 @@ interface PoRow {
   documentNo: string;
   companyCode: string;
   plantCode: string;
+  createdBy: string | null;
   vendorCode: string;
   vendorName: string;
   orderDate: string;
@@ -100,6 +105,8 @@ const emptyForm = (): PoForm => ({
 export default function PurchaseOrderPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { userId } = useAuth();
+  const dataScope = useDataScope("purchase-orders");
 
   const [mode, setMode] = useState<"list" | "create" | "detail">("list");
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -107,12 +114,12 @@ export default function PurchaseOrderPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["purchase-orders"],
-    queryFn: async () => (await api.get("/api/v1/purchase/orders?size=100")).data,
+    queryFn: () => purchaseApi.getOrders({ size: 100 }),
   });
 
   const { data: detailData, isLoading: detailLoading } = useQuery({
     queryKey: ["purchase-order", selectedId],
-    queryFn: async () => (await api.get(`/api/v1/purchase/orders/${selectedId}`)).data,
+    queryFn: () => purchaseApi.getOrder(selectedId!),
     enabled: mode === "detail" && selectedId !== null,
   });
 
@@ -124,10 +131,10 @@ export default function PurchaseOrderPage() {
     },
   });
 
-  const detail: PoRow | undefined = detailData?.data;
+  const detail: PoRow | undefined = detailData;
 
   const createMutation = useMutation({
-    mutationFn: (payload: PoForm) => api.post("/api/v1/purchase/orders", payload),
+    mutationFn: (payload: PoForm) => purchaseApi.createOrder(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       setMode("list");
@@ -135,7 +142,7 @@ export default function PurchaseOrderPage() {
   });
 
   const submitMutation = useMutation({
-    mutationFn: (id: number) => api.post(`/api/v1/purchase/orders/${id}/submit`),
+    mutationFn: (id: number) => purchaseApi.submitOrder(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-order", selectedId] });
@@ -143,7 +150,7 @@ export default function PurchaseOrderPage() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: (id: number) => api.post(`/api/v1/purchase/orders/${id}/approve`),
+    mutationFn: (id: number) => purchaseApi.approveOrder(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-order", selectedId] });
@@ -151,22 +158,14 @@ export default function PurchaseOrderPage() {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (id: number) => api.post(`/api/v1/purchase/orders/${id}/reject`),
+    mutationFn: (id: number) => purchaseApi.rejectOrder(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-order", selectedId] });
     },
   });
 
-  const sendMutation = useMutation({
-    mutationFn: (id: number) => api.post(`/api/v1/purchase/orders/${id}/send`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["purchase-order", selectedId] });
-    },
-  });
-
-  const itemRows = itemLookupData?.data ?? [];
+  const itemRows = useMemo(() => itemLookupData?.data ?? [], [itemLookupData]);
   const itemOptions = useMemo<SearchOption[]>(
     () =>
       itemRows.map((item) => ({
@@ -184,6 +183,17 @@ export default function PurchaseOrderPage() {
   const filteredPlants = form.companyCode
     ? PLANT_OPTIONS.filter((option) => option.meta === form.companyCode)
     : PLANT_OPTIONS;
+  const allRows = useMemo<PoRow[]>(() => data?.data ?? [], [data]);
+  const visibleRows = useMemo(
+    () =>
+      filterRowsByDataScope(allRows, dataScope.scope, {
+        userId,
+        getOwnerId: (row) => row.createdBy,
+        getCompanyCode: (row) => row.companyCode,
+        getPlantCode: (row) => row.plantCode,
+      }),
+    [allRows, dataScope.scope, userId]
+  );
 
   const openCreate = () => {
     setForm(emptyForm());
@@ -285,9 +295,10 @@ export default function PurchaseOrderPage() {
         />
         <div className="card overflow-hidden">
           <DataGrid<PoRow>
-            rowData={data?.data || []}
+            gridId="purchase-orders.list"
+            rowData={visibleRows}
             columnDefs={columnDefs}
-            loading={isLoading}
+            loading={isLoading || dataScope.isLoading}
             onRowClicked={openDetail}
           />
         </div>
@@ -793,15 +804,6 @@ export default function PurchaseOrderPage() {
                       {t("common.approve")}
                     </button>
                   </>
-                )}
-                {detail.status === "APPROVED" && (
-                  <button
-                    className="btn-primary w-full"
-                    onClick={() => sendMutation.mutate(detail.id)}
-                    disabled={sendMutation.isPending}
-                  >
-                    {t("status.SENT", "발송")}
-                  </button>
                 )}
               </div>
             </div>

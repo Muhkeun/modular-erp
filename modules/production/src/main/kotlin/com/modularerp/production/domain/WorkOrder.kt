@@ -20,10 +20,13 @@ import java.time.LocalDateTime
  * - MTO(주문생산) 시 salesOrderNo로 수주와 연결
  */
 @Entity
-@Table(name = "work_orders")
+@Table(
+    name = "work_orders",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["tenant_id", "document_no"])]
+)
 class WorkOrder(
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, length = 30)
     var documentNo: String = "",
 
     @Column(nullable = false, length = 20)

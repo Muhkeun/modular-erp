@@ -10,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-191%20passed-brightgreen?style=flat-square)](#테스트)
+[![Tests](https://img.shields.io/badge/Tests-240%20passed-brightgreen?style=flat-square)](#테스트)
 
 ---
 
@@ -273,7 +273,7 @@ PostgreSQL 16과 Flyway 마이그레이션이 적용된 전체 애플리케이�
 
 ModularERP는 모든 계층에 걸쳐 포괄적인 테스트 커버리지를 갖추고 있습니다.
 
-> **191개 백엔드 테스트** | **15개 프론트엔드 단위 테스트** | **46개 E2E 시나리오** — 전체 통과, 0 실패
+> 2026-03-27 검증 기준: **225개 백엔드 테스트** + **15개 프론트엔드 단위 테스트** = **총 240개 통과**
 
 ### 백엔드 테스트
 

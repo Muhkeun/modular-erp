@@ -5,88 +5,94 @@ import type { ColDef } from "ag-grid-community";
 import { Plus, ArrowLeft, Mail, MailOpen, CheckCheck } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
-import api from "../../../shared/api/client";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import {
+  notificationApi,
+  type CreateNotificationTemplateRequest,
+  type NotificationStatus,
+  type NotificationTemplate,
+} from "../../../shared/api/notificationApi";
 
-interface NotificationRow {
-  id: number;
-  title: string;
-  message: string;
-  type: string;
-  channel: string;
-  isRead: boolean;
-  createdAt: string;
-  referenceType: string | null;
-  referenceId: string | null;
-}
-
-interface TemplateRow {
-  id: number;
-  name: string;
-  type: string;
-  channel: string;
-  subject: string;
-  bodyTemplate: string;
-  enabled: boolean;
-}
+type TemplateRow = NotificationTemplate;
 
 type Tab = "inbox" | "templates";
 
-const typeStyle: Record<string, string> = {
-  INFO: "badge bg-blue-50 text-blue-600",
-  WARNING: "badge-warning",
-  ERROR: "badge-danger",
-  SUCCESS: "badge-success",
+const statusStyle: Record<NotificationStatus, string> = {
+  PENDING: "badge bg-amber-50 text-amber-700",
+  SENT: "badge bg-blue-50 text-blue-700",
+  READ: "badge bg-slate-100 text-slate-600",
+  FAILED: "badge-danger",
 };
 
 export default function NotificationPage() {
   const { t } = useTranslation();
+  const { userId } = useAuth();
   const qc = useQueryClient();
 
   const [tab, setTab] = useState<Tab>("inbox");
   const [templateMode, setTemplateMode] = useState<"list" | "create">("list");
-  const [templateForm, setTemplateForm] = useState({
-    name: "", type: "INFO", channel: "EMAIL", subject: "", bodyTemplate: "",
+  const [templateForm, setTemplateForm] = useState<CreateNotificationTemplateRequest>({
+    templateCode: "",
+    templateName: "",
+    eventType: "GENERAL",
+    channel: "IN_APP",
+    subject: "",
+    body: "",
+    enabled: true,
+    language: "ko",
   });
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["notifications"],
-    queryFn: async () => (await api.get("/api/v1/notification/notifications?size=100")).data,
+  const { data: notifications = [], isLoading } = useQuery({
+    queryKey: ["notifications", userId],
+    queryFn: () => notificationApi.getAll(userId!, 100),
+    enabled: !!userId,
   });
 
-  const templatesQuery = useQuery({
+  const templatesQuery = useQuery<TemplateRow[]>({
     queryKey: ["notification-templates"],
-    queryFn: async () => (await api.get("/api/v1/notification/templates?size=100")).data,
+    queryFn: () => notificationApi.getTemplates(100),
     enabled: tab === "templates",
   });
 
   const markReadMut = useMutation({
-    mutationFn: async (id: number) => (await api.post(`/api/v1/notification/notifications/${id}/read`)).data,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications"] }); },
-  });
-
-  const markUnreadMut = useMutation({
-    mutationFn: async (id: number) => (await api.post(`/api/v1/notification/notifications/${id}/unread`)).data,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications"] }); },
+    mutationFn: (id: number) => notificationApi.markRead(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notifications", userId] });
+    },
   });
 
   const markAllReadMut = useMutation({
-    mutationFn: async () => (await api.post("/api/v1/notification/notifications/read-all")).data,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications"] }); },
+    mutationFn: () => notificationApi.markAllRead(userId!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notifications", userId] });
+    },
   });
 
   const createTemplateMut = useMutation({
-    mutationFn: async (body: Record<string, unknown>) => (await api.post("/api/v1/notification/templates", body)).data,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notification-templates"] }); setTemplateMode("list"); },
+    mutationFn: (body: CreateNotificationTemplateRequest) => notificationApi.createTemplate(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notification-templates"] });
+      setTemplateMode("list");
+      setTemplateForm({
+        templateCode: "",
+        templateName: "",
+        eventType: "GENERAL",
+        channel: "IN_APP",
+        subject: "",
+        body: "",
+        enabled: true,
+        language: "ko",
+      });
+    },
   });
 
-  const notifications: NotificationRow[] = data?.data || [];
-  const templates: TemplateRow[] = templatesQuery.data?.data || [];
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const templates = templatesQuery.data ?? [];
+  const unreadCount = notifications.filter((notification) => notification.status !== "READ").length;
 
   const templateColDefs = useMemo<ColDef<TemplateRow>[]>(() => [
-    { field: "name", headerName: t("notification.templateName"), flex: 1.5,
+    { field: "templateName", headerName: t("notification.templateName"), flex: 1.5,
       cellRenderer: (p: { value: string }) => <span className="font-semibold text-brand-700">{p.value}</span> },
-    { field: "type", headerName: t("common.type"), flex: 0.8 },
+    { field: "eventType", headerName: t("common.type"), flex: 0.8 },
     { field: "channel", headerName: t("notification.channel"), flex: 0.8 },
     { field: "subject", headerName: t("notification.subject"), flex: 2 },
     { field: "enabled", headerName: t("batch.enabled"), flex: 0.6,
@@ -102,12 +108,24 @@ export default function NotificationPage() {
         actions={
           <div className="flex gap-2">
             {tab === "inbox" && unreadCount > 0 && (
-              <button className="btn-secondary" onClick={() => markAllReadMut.mutate()} disabled={markAllReadMut.isPending}>
+              <button className="btn-secondary" onClick={() => markAllReadMut.mutate()} disabled={markAllReadMut.isPending || !userId}>
                 <CheckCheck size={16} /> {t("notification.markAllRead")}
               </button>
             )}
             {tab === "templates" && templateMode === "list" && (
-              <button className="btn-primary" onClick={() => { setTemplateForm({ name: "", type: "INFO", channel: "EMAIL", subject: "", bodyTemplate: "" }); setTemplateMode("create"); }}>
+              <button className="btn-primary" onClick={() => {
+                setTemplateForm({
+                  templateCode: "",
+                  templateName: "",
+                  eventType: "GENERAL",
+                  channel: "IN_APP",
+                  subject: "",
+                  body: "",
+                  enabled: true,
+                  language: "ko",
+                });
+                setTemplateMode("create");
+              }}>
                 <Plus size={16} /> {t("notification.newTemplate")}
               </button>
             )}
@@ -132,28 +150,27 @@ export default function NotificationPage() {
             <div className="section-card text-center text-slate-400">{t("common.noData")}</div>
           ) : (
             notifications.map(n => (
-              <div key={n.id} className={`flex items-start justify-between rounded-[22px] border p-4 ${n.isRead ? "border-slate-200/80 bg-white" : "border-brand-200 bg-brand-50/50"}`}>
+              <div key={n.id} className={`flex items-start justify-between rounded-[22px] border p-4 ${n.status === "READ" ? "border-slate-200/80 bg-white" : "border-brand-200 bg-brand-50/50"}`}>
                 <div className="flex items-start gap-3 flex-1">
                   <div className="mt-1">
-                    {n.isRead ? <MailOpen size={18} className="text-slate-400" /> : <Mail size={18} className="text-brand-600" />}
+                    {n.status === "READ" ? <MailOpen size={18} className="text-slate-400" /> : <Mail size={18} className="text-brand-600" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className={`text-sm font-medium ${n.isRead ? "text-slate-600" : "text-slate-900"}`}>{n.title}</span>
-                      <span className={typeStyle[n.type] || "badge"}>{n.type}</span>
+                      <span className={`text-sm font-medium ${n.status === "READ" ? "text-slate-600" : "text-slate-900"}`}>{n.subject}</span>
+                      <span className={statusStyle[n.status]}>{n.status}</span>
                       <span className="badge bg-slate-100 text-slate-500">{n.channel}</span>
                     </div>
-                    <p className="mt-1 text-sm text-slate-500 line-clamp-2">{n.message}</p>
+                    <p className="mt-1 text-sm text-slate-500 line-clamp-2">{n.body}</p>
                     <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
-                      <span>{n.createdAt}</span>
+                      <span>{n.readAt ?? n.sentAt ?? "-"}</span>
                       {n.referenceType && <span>{n.referenceType}: {n.referenceId}</span>}
+                      {n.errorMessage && <span className="text-red-500">{n.errorMessage}</span>}
                     </div>
                   </div>
                 </div>
                 <div>
-                  {n.isRead ? (
-                    <button className="btn-ghost text-xs" onClick={() => markUnreadMut.mutate(n.id)}>{t("notification.markUnread")}</button>
-                  ) : (
+                  {n.status !== "READ" && (
                     <button className="btn-ghost text-xs" onClick={() => markReadMut.mutate(n.id)}>{t("notification.markRead")}</button>
                   )}
                 </div>
@@ -179,28 +196,30 @@ export default function NotificationPage() {
             <h3 className="section-title">{t("notification.newTemplate")}</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
               <div>
+                <label className="field-label">{t("notification.templateCode", "템플릿 코드")}</label>
+                <input className="input" value={templateForm.templateCode} onChange={e => setTemplateForm((p) => ({ ...p, templateCode: e.target.value }))} />
+              </div>
+              <div>
                 <label className="field-label">{t("notification.templateName")}</label>
-                <input className="input" value={templateForm.name} onChange={e => setTemplateForm(p => ({ ...p, name: e.target.value }))} />
+                <input className="input" value={templateForm.templateName} onChange={e => setTemplateForm((p) => ({ ...p, templateName: e.target.value }))} />
               </div>
               <div>
                 <label className="field-label">{t("common.type")}</label>
-                <select className="input" value={templateForm.type} onChange={e => setTemplateForm(p => ({ ...p, type: e.target.value }))}>
-                  {["INFO", "WARNING", "ERROR", "SUCCESS"].map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                <input className="input" value={templateForm.eventType} onChange={e => setTemplateForm((p) => ({ ...p, eventType: e.target.value }))} />
               </div>
               <div>
                 <label className="field-label">{t("notification.channel")}</label>
-                <select className="input" value={templateForm.channel} onChange={e => setTemplateForm(p => ({ ...p, channel: e.target.value }))}>
-                  {["EMAIL", "IN_APP", "SMS", "PUSH"].map(c => <option key={c} value={c}>{c}</option>)}
+                <select className="input" value={templateForm.channel} onChange={e => setTemplateForm((p) => ({ ...p, channel: e.target.value as CreateNotificationTemplateRequest["channel"] }))}>
+                  {["IN_APP", "EMAIL", "SMS", "PUSH"].map((channel) => <option key={channel} value={channel}>{channel}</option>)}
                 </select>
               </div>
               <div className="md:col-span-3">
                 <label className="field-label">{t("notification.subject")}</label>
-                <input className="input" value={templateForm.subject} onChange={e => setTemplateForm(p => ({ ...p, subject: e.target.value }))} />
+                <input className="input" value={templateForm.subject} onChange={e => setTemplateForm((p) => ({ ...p, subject: e.target.value }))} />
               </div>
               <div className="md:col-span-3">
                 <label className="field-label">{t("notification.body")}</label>
-                <textarea className="input" rows={4} value={templateForm.bodyTemplate} onChange={e => setTemplateForm(p => ({ ...p, bodyTemplate: e.target.value }))} />
+                <textarea className="input" rows={4} value={templateForm.body} onChange={e => setTemplateForm((p) => ({ ...p, body: e.target.value }))} />
               </div>
             </div>
           </div>

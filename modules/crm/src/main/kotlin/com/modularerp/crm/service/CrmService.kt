@@ -1,5 +1,6 @@
 package com.modularerp.crm.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.core.exception.EntityNotFoundException
 import com.modularerp.crm.domain.*
 import com.modularerp.crm.dto.*
@@ -26,9 +27,22 @@ class CrmService(
 
     fun getCustomerById(id: Long): CustomerResponse = findCustomer(id).toResponse()
 
-    fun searchCustomers(status: CustomerStatus?, customerCode: String?, customerName: String?,
-                        pageable: Pageable): Page<CustomerResponse> =
-        customerRepository.search(TenantContext.getTenantId(), status, customerCode, customerName, pageable)
+    fun searchCustomers(
+        status: CustomerStatus?,
+        customerCode: String?,
+        customerName: String?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<CustomerResponse> =
+        customerRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            status = status,
+            customerCode = customerCode,
+            customerName = customerName,
+            applyOwnScope = scopeFilter.ownUserId != null,
+            ownUserId = scopeFilter.ownUserId ?: "__NO_MATCH__",
+            pageable = pageable
+        )
             .map { it.toResponse() }
 
     @Transactional
@@ -74,9 +88,22 @@ class CrmService(
 
     fun getLeadById(id: Long): LeadResponse = findLead(id).toResponse()
 
-    fun searchLeads(status: LeadStatus?, source: LeadSource?, leadNo: String?,
-                    pageable: Pageable): Page<LeadResponse> =
-        leadRepository.search(TenantContext.getTenantId(), status, source, leadNo, pageable)
+    fun searchLeads(
+        status: LeadStatus?,
+        source: LeadSource?,
+        leadNo: String?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<LeadResponse> =
+        leadRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            status = status,
+            source = source,
+            leadNo = leadNo,
+            applyOwnScope = scopeFilter.ownUserId != null,
+            ownUserId = scopeFilter.ownUserId ?: "__NO_MATCH__",
+            pageable = pageable
+        )
             .map { it.toResponse() }
 
     @Transactional
@@ -136,9 +163,20 @@ class CrmService(
 
     fun getOpportunityById(id: Long): OpportunityResponse = findOpportunity(id).toResponse()
 
-    fun searchOpportunities(stage: OpportunityStage?, assignedTo: String?,
-                            pageable: Pageable): Page<OpportunityResponse> =
-        opportunityRepository.search(TenantContext.getTenantId(), stage, assignedTo, pageable)
+    fun searchOpportunities(
+        stage: OpportunityStage?,
+        assignedTo: String?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<OpportunityResponse> =
+        opportunityRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            stage = stage,
+            assignedTo = assignedTo,
+            applyOwnScope = scopeFilter.ownUserId != null,
+            ownUserId = scopeFilter.ownUserId ?: "__NO_MATCH__",
+            pageable = pageable
+        )
             .map { it.toResponse() }
 
     @Transactional
@@ -164,8 +202,12 @@ class CrmService(
         return opportunityRepository.save(opp).toResponse()
     }
 
-    fun getSalesPipeline(): List<PipelineResponse> =
-        opportunityRepository.getPipelineSummary(TenantContext.getTenantId()).map { row ->
+    fun getSalesPipeline(scopeFilter: DataScopeSearchFilter): List<PipelineResponse> =
+        opportunityRepository.getPipelineSummary(
+            tenantId = TenantContext.getTenantId(),
+            applyOwnScope = scopeFilter.ownUserId != null,
+            ownUserId = scopeFilter.ownUserId ?: "__NO_MATCH__"
+        ).map { row ->
             PipelineResponse(
                 stage = (row[0] as OpportunityStage).name,
                 count = row[1] as Long,
@@ -174,20 +216,45 @@ class CrmService(
         }
 
     fun getCustomerActivities(customerId: Long, pageable: Pageable): Page<ActivityResponse> =
-        activityRepository.search(TenantContext.getTenantId(), "CUSTOMER", customerId, pageable)
+        activityRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            referenceType = "CUSTOMER",
+            referenceId = customerId,
+            applyOwnScope = false,
+            ownUserId = "__NO_MATCH__",
+            pageable = pageable
+        )
             .map { it.toResponse() }
 
     fun getAssignedOpportunities(assignedTo: String, pageable: Pageable): Page<OpportunityResponse> =
-        opportunityRepository.search(TenantContext.getTenantId(), null, assignedTo, pageable)
+        opportunityRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            stage = null,
+            assignedTo = assignedTo,
+            applyOwnScope = false,
+            ownUserId = "__NO_MATCH__",
+            pageable = pageable
+        )
             .map { it.toResponse() }
 
     // ── Activity ──
 
     fun getActivityById(id: Long): ActivityResponse = findActivity(id).toResponse()
 
-    fun searchActivities(referenceType: String?, referenceId: Long?,
-                         pageable: Pageable): Page<ActivityResponse> =
-        activityRepository.search(TenantContext.getTenantId(), referenceType, referenceId, pageable)
+    fun searchActivities(
+        referenceType: String?,
+        referenceId: Long?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<ActivityResponse> =
+        activityRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            referenceType = referenceType,
+            referenceId = referenceId,
+            applyOwnScope = scopeFilter.ownUserId != null,
+            ownUserId = scopeFilter.ownUserId ?: "__NO_MATCH__",
+            pageable = pageable
+        )
             .map { it.toResponse() }
 
     @Transactional

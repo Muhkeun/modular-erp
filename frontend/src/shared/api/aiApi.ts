@@ -19,7 +19,7 @@ export interface AiChatResponse {
   suggestedActions?: string[];
   queryResult?: {
     columns: string[];
-    data: any[][];
+    data: unknown[][];
     totalCount: number;
   };
 }

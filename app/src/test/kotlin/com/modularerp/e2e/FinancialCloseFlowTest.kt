@@ -81,7 +81,10 @@ class FinancialCloseFlowTest {
     @Order(1)
     fun `step 1 - generate fiscal year with 12 periods`() {
         println("=== Financial Close E2E: Step 1 - Generate fiscal year ===")
-        val request = mapOf("fiscalYear" to FISCAL_YEAR)
+        val request = mapOf(
+            "companyCode" to COMPANY,
+            "fiscalYear" to FISCAL_YEAR
+        )
 
         val resp = restTemplate.exchange(
             "/api/v1/period-close/periods/generate", HttpMethod.POST,

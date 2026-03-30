@@ -5,10 +5,15 @@ import type { ColDef } from "ag-grid-community";
 import { Plus, ArrowLeft, Trash2 } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
-import api from "../../../shared/api/client";
+import {
+  accountApi,
+  type CreateJournalEntryRequest,
+  type JournalEntry,
+  type JournalEntryType,
+} from "../../../shared/api/accountApi";
 
 /* ── types ─────────────────────────────────────────── */
-interface JeLine {
+type JeLine = {
   id?: number;
   accountCode: string;
   accountName: string;
@@ -16,23 +21,8 @@ interface JeLine {
   creditAmount: number;
   costCenter: string;
   description: string;
-}
-
-interface JeRow {
-  id: number;
-  documentNo: string;
-  companyCode: string;
-  postingDate: string;
-  entryType: string;
-  status: string;
-  totalDebit: number;
-  totalCredit: number;
-  isBalanced: boolean;
-  description: string | null;
-  referenceDocNo: string | null;
-  currencyCode: string;
-  lines: JeLine[];
-}
+};
+type JeRow = JournalEntry;
 
 type Mode = "list" | "create" | "detail";
 
@@ -69,28 +59,28 @@ export default function JournalEntryPage() {
   /* queries */
   const { data, isLoading } = useQuery({
     queryKey: ["journal-entries"],
-    queryFn: async () => (await api.get("/api/v1/account/journal-entries?size=100")).data,
+    queryFn: () => accountApi.getJournalEntries({ size: 100 }),
   });
 
   const detailQuery = useQuery({
     queryKey: ["journal-entry", selected?.id],
-    queryFn: async () => (await api.get(`/api/v1/account/journal-entries/${selected!.id}`)).data,
+    queryFn: () => accountApi.getJournalEntry(selected!.id),
     enabled: mode === "detail" && !!selected?.id,
   });
 
   /* mutations */
   const createMut = useMutation({
-    mutationFn: async (body: Record<string, unknown>) => (await api.post("/api/v1/account/journal-entries", body)).data,
+    mutationFn: (body: CreateJournalEntryRequest) => accountApi.createJournalEntry(body),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["journal-entries"] }); setMode("list"); },
   });
 
   const postMut = useMutation({
-    mutationFn: async (id: number) => (await api.post(`/api/v1/account/journal-entries/${id}/post`)).data,
+    mutationFn: (id: number) => accountApi.postJournalEntry(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["journal-entries"] }); qc.invalidateQueries({ queryKey: ["journal-entry", selected?.id] }); },
   });
 
   const reverseMut = useMutation({
-    mutationFn: async (id: number) => (await api.post(`/api/v1/account/journal-entries/${id}/reverse`)).data,
+    mutationFn: (id: number) => accountApi.reverseJournalEntry(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["journal-entries"] }); qc.invalidateQueries({ queryKey: ["journal-entry", selected?.id] }); },
   });
 
@@ -126,10 +116,10 @@ export default function JournalEntryPage() {
   };
 
   const handleSave = () => {
-    createMut.mutate({ ...form, lines });
+    createMut.mutate({ ...form, entryType: form.entryType as JournalEntryType, lines });
   };
 
-  const detail: JeRow | undefined = detailQuery.data?.data;
+  const detail: JeRow | undefined = detailQuery.data;
 
   /* running totals for create form */
   const totalDebit = lines.reduce((s, l) => s + (l.debitAmount || 0), 0);
@@ -152,7 +142,7 @@ export default function JournalEntryPage() {
           breadcrumbs={[{ label: t("nav.finance") }, { label: t("nav.journalEntries") }]}
           actions={<button className="btn-primary" onClick={openCreate}><Plus size={16} /> {t("je.newJe")}</button>} />
         <div className="card overflow-hidden">
-          <DataGrid<JeRow> rowData={data?.data || []} columnDefs={columnDefs} loading={isLoading}
+          <DataGrid<JeRow> gridId="journal-entries.list" rowData={data?.data || []} columnDefs={columnDefs} loading={isLoading}
             onRowClicked={onRowClicked} />
         </div>
       </div>
@@ -356,7 +346,7 @@ export default function JournalEntryPage() {
                 <span>{t("je.costCenter")}</span>
                 <span>{t("je.lineDescription")}</span>
               </div>
-              {detail.lines?.map((l: JeLine, idx: number) => (
+              {detail.lines?.map((l, idx) => (
                 <div key={idx} className="grid-table-row">
                   <span className="text-slate-400">{idx + 1}</span>
                   <span className="font-mono">{l.accountCode}</span>

@@ -20,10 +20,13 @@ import java.time.LocalDate
  * - referenceDocNo/Type으로 원 거래 전표(GR, Invoice 등)와 연결
  */
 @Entity
-@Table(name = "journal_entries")
+@Table(
+    name = "journal_entries",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["tenant_id", "document_no"])]
+)
 class JournalEntry(
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, length = 30)
     var documentNo: String = "",
 
     @Column(nullable = false, length = 20)

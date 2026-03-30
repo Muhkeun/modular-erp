@@ -10,15 +10,23 @@ import java.util.Optional
 
 interface CostCenterRepository : JpaRepository<CostCenter, Long> {
     fun findByTenantIdAndId(tenantId: String, id: Long): Optional<CostCenter>
+    fun findByTenantIdAndCostCenterCodeAndActiveTrue(tenantId: String, costCenterCode: String): Optional<CostCenter>
 
     @Query("""
         SELECT cc FROM CostCenter cc WHERE cc.tenantId = :tenantId AND cc.active = true
         AND (:status IS NULL OR cc.status = :status)
         AND (:costCenterCode IS NULL OR cc.costCenterCode LIKE %:costCenterCode%)
+        AND (:applyDepartmentScope = false OR cc.departmentCode IN :departmentCodes)
         ORDER BY cc.costCenterCode ASC
     """)
-    fun search(tenantId: String, status: CostCenterStatus?, costCenterCode: String?,
-               pageable: Pageable): Page<CostCenter>
+    fun search(
+        tenantId: String,
+        status: CostCenterStatus?,
+        costCenterCode: String?,
+        applyDepartmentScope: Boolean,
+        departmentCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<CostCenter>
 }
 
 interface StandardCostRepository : JpaRepository<StandardCost, Long> {
@@ -28,17 +36,33 @@ interface StandardCostRepository : JpaRepository<StandardCost, Long> {
         SELECT sc FROM StandardCost sc WHERE sc.tenantId = :tenantId AND sc.active = true
         AND (:itemCode IS NULL OR sc.itemCode = :itemCode)
         AND (:costType IS NULL OR sc.costType = :costType)
+        AND (
+            :applyDepartmentScope = false OR EXISTS(
+                SELECT 1 FROM CostCenter cc
+                WHERE cc.tenantId = sc.tenantId
+                AND cc.active = true
+                AND cc.costCenterCode = sc.costCenterCode
+                AND cc.departmentCode IN :departmentCodes
+            )
+        )
         ORDER BY sc.effectiveFrom DESC
     """)
-    fun search(tenantId: String, itemCode: String?, costType: CostType?,
-               pageable: Pageable): Page<StandardCost>
+    fun search(
+        tenantId: String,
+        itemCode: String?,
+        costType: CostType?,
+        applyDepartmentScope: Boolean,
+        departmentCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<StandardCost>
 
     @Query("""
         SELECT sc FROM StandardCost sc WHERE sc.tenantId = :tenantId AND sc.active = true
         AND sc.itemCode = :itemCode AND sc.effectiveFrom <= :date
         AND (sc.effectiveTo IS NULL OR sc.effectiveTo >= :date)
+        AND (:costCenterCode IS NULL OR sc.costCenterCode = :costCenterCode)
     """)
-    fun findEffective(tenantId: String, itemCode: String, date: LocalDate): List<StandardCost>
+    fun findEffective(tenantId: String, itemCode: String, date: LocalDate, costCenterCode: String?): List<StandardCost>
 }
 
 interface CostAllocationRepository : JpaRepository<CostAllocation, Long> {
@@ -48,10 +72,34 @@ interface CostAllocationRepository : JpaRepository<CostAllocation, Long> {
         SELECT ca FROM CostAllocation ca WHERE ca.tenantId = :tenantId AND ca.active = true
         AND (:status IS NULL OR ca.status = :status)
         AND (:fiscalYear IS NULL OR ca.fiscalYear = :fiscalYear)
+        AND (
+            :applyDepartmentScope = false OR (
+                EXISTS(
+                    SELECT 1 FROM CostCenter fromCc
+                    WHERE fromCc.tenantId = ca.tenantId
+                    AND fromCc.active = true
+                    AND fromCc.costCenterCode = ca.fromCostCenter
+                    AND fromCc.departmentCode IN :departmentCodes
+                )
+                AND EXISTS(
+                    SELECT 1 FROM CostCenter toCc
+                    WHERE toCc.tenantId = ca.tenantId
+                    AND toCc.active = true
+                    AND toCc.costCenterCode = ca.toCostCenter
+                    AND toCc.departmentCode IN :departmentCodes
+                )
+            )
+        )
         ORDER BY ca.allocationDate DESC
     """)
-    fun search(tenantId: String, status: CostAllocationStatus?, fiscalYear: Int?,
-               pageable: Pageable): Page<CostAllocation>
+    fun search(
+        tenantId: String,
+        status: CostAllocationStatus?,
+        fiscalYear: Int?,
+        applyDepartmentScope: Boolean,
+        departmentCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<CostAllocation>
 }
 
 interface ProductCostRepository : JpaRepository<ProductCost, Long> {
@@ -61,8 +109,23 @@ interface ProductCostRepository : JpaRepository<ProductCost, Long> {
         SELECT pc FROM ProductCost pc WHERE pc.tenantId = :tenantId AND pc.active = true
         AND (:itemCode IS NULL OR pc.itemCode = :itemCode)
         AND (:fiscalYear IS NULL OR pc.fiscalYear = :fiscalYear)
+        AND (
+            :applyDepartmentScope = false OR EXISTS(
+                SELECT 1 FROM CostCenter cc
+                WHERE cc.tenantId = pc.tenantId
+                AND cc.active = true
+                AND cc.costCenterCode = pc.costCenterCode
+                AND cc.departmentCode IN :departmentCodes
+            )
+        )
         ORDER BY pc.fiscalYear DESC, pc.period DESC
     """)
-    fun search(tenantId: String, itemCode: String?, fiscalYear: Int?,
-               pageable: Pageable): Page<ProductCost>
+    fun search(
+        tenantId: String,
+        itemCode: String?,
+        fiscalYear: Int?,
+        applyDepartmentScope: Boolean,
+        departmentCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<ProductCost>
 }

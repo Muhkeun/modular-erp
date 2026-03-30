@@ -5,39 +5,14 @@ import type { ColDef } from "ag-grid-community";
 import { Plus, ArrowLeft, Trash2 } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
-import api from "../../../shared/api/client";
+import { salesApi, type CreateSalesOrderRequest, type SalesOrder, type SalesOrderLineInput } from "../../../shared/api/salesApi";
+import { useDataScope } from "../../../shared/hooks/useDataScope";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { filterRowsByDataScope } from "../../../shared/utils/dataScope";
 
 /* ── types ─────────────────────────────────────────── */
-interface SoLine {
-  id?: number;
-  itemCode: string;
-  itemName: string;
-  quantity: number;
-  unitOfMeasure: string;
-  unitPrice: number;
-  taxRate: number;
-  specification: string;
-}
-
-interface SoRow {
-  id: number;
-  documentNo: string;
-  companyCode: string;
-  plantCode: string;
-  customerCode: string;
-  customerName: string;
-  orderDate: string;
-  deliveryDate: string | null;
-  currencyCode: string;
-  paymentTerms: string | null;
-  shippingAddress: string | null;
-  remark: string | null;
-  status: string;
-  totalAmount: number;
-  taxAmount: number;
-  grandTotal: number;
-  lines: SoLine[];
-}
+type SoLine = SalesOrderLineInput & { specification: string };
+type SoRow = SalesOrder;
 
 type Mode = "list" | "create" | "detail";
 
@@ -61,6 +36,8 @@ const fmt = (v: number) =>
 export default function SalesOrderPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const { userId } = useAuth();
+  const dataScope = useDataScope("sales-orders");
 
   const [mode, setMode] = useState<Mode>("list");
   const [selected, setSelected] = useState<SoRow | null>(null);
@@ -75,33 +52,44 @@ export default function SalesOrderPage() {
   /* queries */
   const { data, isLoading } = useQuery({
     queryKey: ["sales-orders"],
-    queryFn: async () => (await api.get("/api/v1/sales/orders?size=100")).data,
+    queryFn: () => salesApi.getOrders({ size: 100 }),
   });
 
   const detailQuery = useQuery({
     queryKey: ["sales-order", selected?.id],
-    queryFn: async () => (await api.get(`/api/v1/sales/orders/${selected!.id}`)).data,
+    queryFn: () => salesApi.getOrder(selected!.id),
     enabled: mode === "detail" && !!selected?.id,
   });
 
   /* mutations */
   const createMut = useMutation({
-    mutationFn: async (body: Record<string, unknown>) => (await api.post("/api/v1/sales/orders", body)).data,
+    mutationFn: (body: CreateSalesOrderRequest) => salesApi.createOrder(body),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); setMode("list"); },
   });
 
   const submitMut = useMutation({
-    mutationFn: async (id: number) => (await api.post(`/api/v1/sales/orders/${id}/submit`)).data,
+    mutationFn: (id: number) => salesApi.submitOrder(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); qc.invalidateQueries({ queryKey: ["sales-order", selected?.id] }); },
   });
 
   const approveMut = useMutation({
-    mutationFn: async (id: number) => (await api.post(`/api/v1/sales/orders/${id}/approve`)).data,
+    mutationFn: (id: number) => salesApi.approveOrder(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); qc.invalidateQueries({ queryKey: ["sales-order", selected?.id] }); },
   });
+  const allRows = useMemo<SoRow[]>(() => data?.data ?? [], [data]);
+  const visibleRows = useMemo(
+    () =>
+      filterRowsByDataScope(allRows, dataScope.scope, {
+        userId,
+        getOwnerId: (row) => row.createdBy,
+        getCompanyCode: (row) => row.companyCode,
+        getPlantCode: (row) => row.plantCode,
+      }),
+    [allRows, dataScope.scope, userId]
+  );
 
   const rejectMut = useMutation({
-    mutationFn: async (id: number) => (await api.post(`/api/v1/sales/orders/${id}/reject`)).data,
+    mutationFn: (id: number) => salesApi.rejectOrder(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); qc.invalidateQueries({ queryKey: ["sales-order", selected?.id] }); },
   });
 
@@ -138,7 +126,7 @@ export default function SalesOrderPage() {
     createMut.mutate({ ...form, lines });
   };
 
-  const detail: SoRow | undefined = detailQuery.data?.data;
+  const detail: SoRow | undefined = detailQuery.data;
 
   /* ── LIST ─────────────────────────────────────────── */
   if (mode === "list") {
@@ -148,7 +136,7 @@ export default function SalesOrderPage() {
           breadcrumbs={[{ label: t("nav.sales") }, { label: t("nav.salesOrders") }]}
           actions={<button className="btn-primary" onClick={openCreate}><Plus size={16} /> {t("so.newSo")}</button>} />
         <div className="card overflow-hidden">
-          <DataGrid<SoRow> rowData={data?.data || []} columnDefs={columnDefs} loading={isLoading}
+          <DataGrid<SoRow> gridId="sales-orders.list" rowData={visibleRows} columnDefs={columnDefs} loading={isLoading || dataScope.isLoading}
             onRowClicked={onRowClicked} />
         </div>
       </div>
@@ -391,7 +379,7 @@ export default function SalesOrderPage() {
                 <span>{t("so.specification")}</span>
                 <span className="text-right">{t("common.amount")}</span>
               </div>
-              {detail.lines?.map((l: SoLine, idx: number) => (
+              {detail.lines?.map((l, idx) => (
                 <div key={idx} className="grid-table-row">
                   <span className="text-slate-400">{idx + 1}</span>
                   <span className="font-mono">{l.itemCode}</span>

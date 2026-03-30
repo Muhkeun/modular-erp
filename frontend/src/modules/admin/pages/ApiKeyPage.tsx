@@ -1,59 +1,65 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiKeyApi, type ApiKeyInfo, type ApiKeyCreateResult } from '../../../shared/api/adminPhase4Api';
 import PageHeader from '../../../shared/components/PageHeader';
 import DataGrid from '../../../shared/components/DataGrid';
-import type { ColDef } from 'ag-grid-community';
+import type { ColDef, ICellRendererParams, ValueFormatterParams } from 'ag-grid-community';
 import { Plus, Trash2, Copy } from 'lucide-react';
 
 export default function ApiKeyPage() {
   const { t } = useTranslation();
-  const [keys, setKeys] = useState<ApiKeyInfo[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newKey, setNewKey] = useState<ApiKeyCreateResult | null>(null);
   const [formName, setFormName] = useState('');
   const [formDesc, setFormDesc] = useState('');
 
-  const load = () => {
-    setLoading(true);
-    apiKeyApi.getAll().then(setKeys).finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
+  const {
+    data: keys = [],
+    isLoading: loading,
+    refetch,
+  } = useQuery({
+    queryKey: ['admin', 'api-keys'],
+    queryFn: apiKeyApi.getAll,
+  });
 
   const columnDefs: ColDef<ApiKeyInfo>[] = [
     { field: 'name', headerName: t('common.name', '명칭'), flex: 1 },
     {
       field: 'keyPrefix', headerName: 'Key', width: 140,
-      valueFormatter: (p: any) => `${p.value}...`,
+      valueFormatter: ({ value }: ValueFormatterParams<ApiKeyInfo, string>) => value ? `${value}...` : '',
     },
     {
       field: 'status', headerName: t('common.status', '상태'), width: 100,
-      cellRenderer: (p: any) => {
-        const colors: Record<string, string> = {
+      cellRenderer: ({ value }: ICellRendererParams<ApiKeyInfo, ApiKeyInfo['status']>) => {
+        const colors: Record<ApiKeyInfo['status'], string> = {
           ACTIVE: 'bg-green-100 text-green-700',
           REVOKED: 'bg-red-100 text-red-700',
           EXPIRED: 'bg-slate-100 text-slate-500',
         };
-        return <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colors[p.value] ?? ''}`}>{p.value}</span>;
+        return value ? <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colors[value]}`}>{value}</span> : null;
       },
     },
-    { field: 'rateLimit', headerName: 'Rate Limit', width: 110, valueFormatter: (p: any) => p.value ? `${p.value}/min` : 'Unlimited' },
+    {
+      field: 'rateLimit',
+      headerName: 'Rate Limit',
+      width: 110,
+      valueFormatter: ({ value }: ValueFormatterParams<ApiKeyInfo, number | null>) => value ? `${value}/min` : 'Unlimited',
+    },
     {
       field: 'lastUsedAt', headerName: 'Last Used', width: 160,
-      valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleString() : 'Never',
+      valueFormatter: ({ value }: ValueFormatterParams<ApiKeyInfo, string | null>) => value ? new Date(value).toLocaleString() : 'Never',
     },
     {
       field: 'createdAt', headerName: 'Created', width: 160,
-      valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleString() : '',
+      valueFormatter: ({ value }: ValueFormatterParams<ApiKeyInfo, string>) => value ? new Date(value).toLocaleString() : '',
     },
     {
       headerName: '', width: 80, sortable: false, filter: false,
-      cellRenderer: (p: any) => {
-        if (p.data?.status !== 'ACTIVE') return null;
+      cellRenderer: ({ data }: ICellRendererParams<ApiKeyInfo>) => {
+        if (!data || data.status !== 'ACTIVE') return null;
         return (
-          <button onClick={() => handleRevoke(p.data.id)} className="p-1 text-slate-400 hover:text-red-500" title="Revoke">
+          <button onClick={() => handleRevoke(data.id)} className="p-1 text-slate-400 hover:text-red-500" title="Revoke">
             <Trash2 size={14} />
           </button>
         );
@@ -67,13 +73,13 @@ export default function ApiKeyPage() {
     setShowCreate(false);
     setFormName('');
     setFormDesc('');
-    load();
+    await refetch();
   };
 
   const handleRevoke = async (id: number) => {
     if (!confirm('이 API 키를 폐기하시겠습니까?')) return;
     await apiKeyApi.revoke(id);
-    load();
+    await refetch();
   };
 
   const copyToClipboard = (text: string) => {

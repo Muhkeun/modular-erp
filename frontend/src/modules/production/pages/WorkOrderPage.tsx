@@ -6,40 +6,24 @@ import type { ColDef } from "ag-grid-community";
 import { Plus, X, Factory, Clock, CheckCircle } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
-import api from "../../../shared/api/client";
+import {
+  productionApi,
+  type CreateWorkOrderRequest,
+  type WorkOrder,
+  type WoPriority,
+  type WoType,
+} from "../../../shared/api/productionApi";
+import { useDataScope } from "../../../shared/hooks/useDataScope";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { filterRowsByDataScope } from "../../../shared/utils/dataScope";
 
-interface WoRow {
-  id: number;
-  documentNo: string;
-  productCode: string;
-  productName: string;
-  plannedQuantity: number;
-  completedQuantity: number;
-  scrapQuantity: number;
-  yieldRate: number;
-  status: string;
-  priority: string;
-  orderType: string;
-  plantCode: string;
-  plannedStartDate: string | null;
-  plannedEndDate: string | null;
-}
-
-interface CreateForm {
-  companyCode: string;
-  plantCode: string;
-  productCode: string;
-  productName: string;
-  plannedQuantity: number;
-  unitOfMeasure: string;
-  orderType: string;
-  priority: string;
+type WoRow = WorkOrder;
+type CreateForm = CreateWorkOrderRequest & {
   salesOrderNo: string;
   plannedStartDate: string;
   plannedEndDate: string;
   remark: string;
-  autoPopulate: boolean;
-}
+};
 
 const statusStyle: Record<string, string> = {
   PLANNED: "badge bg-slate-100 text-slate-600",
@@ -76,6 +60,8 @@ export default function WorkOrderPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { userId } = useAuth();
+  const dataScope = useDataScope("work-orders");
 
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState<CreateForm>({ ...emptyForm });
@@ -84,12 +70,11 @@ export default function WorkOrderPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["work-orders"],
-    queryFn: async () => (await api.get("/api/v1/production/work-orders?size=100")).data,
+    queryFn: () => productionApi.getWorkOrders({ size: 100 }),
   });
 
   const createMutation = useMutation({
-    mutationFn: async (payload: CreateForm) =>
-      (await api.post("/api/v1/production/work-orders", payload)).data,
+    mutationFn: (payload: CreateForm) => productionApi.createWorkOrder(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["work-orders"] });
       setShowCreate(false);
@@ -97,18 +82,28 @@ export default function WorkOrderPage() {
     },
   });
 
-  const allRows: WoRow[] = data?.data || [];
+  const allRows = useMemo<WoRow[]>(() => data?.data ?? [], [data]);
+  const scopedRows = useMemo(
+    () =>
+      filterRowsByDataScope(allRows, dataScope.scope, {
+        userId,
+        getOwnerId: (row) => row.createdBy,
+        getCompanyCode: (row) => row.companyCode,
+        getPlantCode: (row) => row.plantCode,
+      }),
+    [allRows, dataScope.scope, userId]
+  );
 
   const rows = useMemo(() => {
-    let filtered = allRows;
+    let filtered = scopedRows;
     if (statusFilter) filtered = filtered.filter((r) => r.status === statusFilter);
     if (plantFilter) filtered = filtered.filter((r) => r.plantCode === plantFilter);
     return filtered;
-  }, [allRows, statusFilter, plantFilter]);
+  }, [plantFilter, scopedRows, statusFilter]);
 
-  const inProgress = allRows.filter((r) => r.status === "IN_PROGRESS").length;
-  const planned = allRows.filter((r) => r.status === "PLANNED" || r.status === "RELEASED").length;
-  const completed = allRows.filter((r) => r.status === "COMPLETED").length;
+  const inProgress = scopedRows.filter((r) => r.status === "IN_PROGRESS").length;
+  const planned = scopedRows.filter((r) => r.status === "PLANNED" || r.status === "RELEASED").length;
+  const completed = scopedRows.filter((r) => r.status === "COMPLETED").length;
 
   const columnDefs = useMemo<ColDef<WoRow>[]>(
     () => [
@@ -177,7 +172,7 @@ export default function WorkOrderPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const statuses = ["PLANNED", "RELEASED", "IN_PROGRESS", "COMPLETED", "CLOSED"];
-  const plants = [...new Set(allRows.map((r) => r.plantCode).filter(Boolean))];
+  const plants = [...new Set(scopedRows.map((r) => r.plantCode).filter(Boolean))];
 
   return (
     <div>
@@ -247,9 +242,10 @@ export default function WorkOrderPage() {
       {/* Grid */}
       <div className="card overflow-hidden">
         <DataGrid<WoRow>
+          gridId="work-orders.list"
           rowData={rows}
           columnDefs={columnDefs}
-          loading={isLoading}
+          loading={isLoading || dataScope.isLoading}
           onRowClicked={handleRowClick}
         />
       </div>
@@ -295,7 +291,7 @@ export default function WorkOrderPage() {
                 </div>
                 <div>
                   <label className="field-label">{t("wo.orderType")}</label>
-                  <select className="input w-full" value={form.orderType} onChange={(e) => updateField("orderType", e.target.value)}>
+                  <select className="input w-full" value={form.orderType} onChange={(e) => updateField("orderType", e.target.value as WoType)}>
                     <option value="STANDARD">Standard</option>
                     <option value="REWORK">Rework</option>
                     <option value="PROTOTYPE">Prototype</option>
@@ -303,7 +299,7 @@ export default function WorkOrderPage() {
                 </div>
                 <div>
                   <label className="field-label">{t("wo.priority")}</label>
-                  <select className="input w-full" value={form.priority} onChange={(e) => updateField("priority", e.target.value)}>
+                  <select className="input w-full" value={form.priority} onChange={(e) => updateField("priority", e.target.value as WoPriority)}>
                     <option value="LOW">LOW</option>
                     <option value="NORMAL">NORMAL</option>
                     <option value="HIGH">HIGH</option>

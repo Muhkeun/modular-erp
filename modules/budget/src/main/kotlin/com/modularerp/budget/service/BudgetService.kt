@@ -1,5 +1,6 @@
 package com.modularerp.budget.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.budget.domain.*
 import com.modularerp.budget.dto.*
 import com.modularerp.budget.repository.*
@@ -69,8 +70,20 @@ class BudgetService(
 
     fun getItemById(id: Long): BudgetItemResponse = findItem(id).toResponse()
 
-    fun getItemsByPeriod(periodId: Long, pageable: Pageable): Page<BudgetItemResponse> =
-        itemRepository.findByPeriod(TenantContext.getTenantId(), periodId, pageable).map { it.toResponse() }
+    fun getItemsByPeriod(
+        periodId: Long,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<BudgetItemResponse> =
+        itemRepository.findByPeriod(
+            tenantId = TenantContext.getTenantId(),
+            periodId = periodId,
+            applyDepartmentScope = scopeFilter.departmentCodes.isNotEmpty(),
+            departmentCodes = scopeFilter.scopedDepartmentCodes(),
+            applyPlantScope = scopeFilter.plantCodes.isNotEmpty(),
+            plantCodes = scopeFilter.scopedPlantCodes(),
+            pageable = pageable
+        ).map { it.toResponse() }
 
     @Transactional
     fun createBudgetItem(request: CreateBudgetItemRequest): BudgetItemResponse {
@@ -129,7 +142,15 @@ class BudgetService(
     // --- Analysis ---
 
     fun getBudgetVsActual(periodId: Long, pageable: Pageable): Page<BudgetAnalysisResponse> {
-        return itemRepository.findByPeriod(TenantContext.getTenantId(), periodId, pageable).map { item ->
+        return itemRepository.findByPeriod(
+            tenantId = TenantContext.getTenantId(),
+            periodId = periodId,
+            applyDepartmentScope = false,
+            departmentCodes = listOf("__NO_MATCH__"),
+            applyPlantScope = false,
+            plantCodes = listOf("__NO_MATCH__"),
+            pageable = pageable
+        ).map { item ->
             BudgetAnalysisResponse(
                 accountCode = item.accountCode, accountName = item.accountName,
                 budgetAmount = item.budgetAmount, revisedAmount = item.revisedAmount,

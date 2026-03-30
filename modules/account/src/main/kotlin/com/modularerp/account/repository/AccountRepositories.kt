@@ -15,10 +15,18 @@ interface JournalEntryRepository : JpaRepository<JournalEntry, Long> {
         AND (:status IS NULL OR je.status = :status)
         AND (:entryType IS NULL OR je.entryType = :entryType)
         AND (:documentNo IS NULL OR je.documentNo LIKE %:documentNo%)
+        AND (:applyCompanyScope = false OR je.companyCode IN :companyCodes)
         ORDER BY je.postingDate DESC
     """)
-    fun search(tenantId: String, status: JeStatus?, entryType: JournalEntryType?,
-               documentNo: String?, pageable: Pageable): Page<JournalEntry>
+    fun search(
+        tenantId: String,
+        status: JeStatus?,
+        entryType: JournalEntryType?,
+        documentNo: String?,
+        applyCompanyScope: Boolean,
+        companyCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<JournalEntry>
 }
 
 interface AccountMasterRepository : JpaRepository<AccountMaster, Long> {

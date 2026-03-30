@@ -12,6 +12,9 @@ class ProductCost(
     @Column(nullable = false, length = 50)
     var itemCode: String = "",
 
+    @Column(length = 30)
+    var costCenterCode: String? = null,
+
     @Column(nullable = false)
     var fiscalYear: Int = 0,
 

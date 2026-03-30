@@ -59,8 +59,15 @@ interface CurrencyRevaluationRepository : JpaRepository<CurrencyRevaluation, Lon
         SELECT r FROM CurrencyRevaluation r WHERE r.tenantId = :tenantId AND r.active = true
         AND (:status IS NULL OR r.status = :status)
         AND (:fiscalYear IS NULL OR r.fiscalYear = :fiscalYear)
+        AND (:applyCompanyScope = false OR r.companyCode IN :companyCodes)
         ORDER BY r.revaluationDate DESC
     """)
-    fun search(tenantId: String, status: RevaluationStatus?, fiscalYear: Int?,
-               pageable: Pageable): Page<CurrencyRevaluation>
+    fun search(
+        tenantId: String,
+        status: RevaluationStatus?,
+        fiscalYear: Int?,
+        applyCompanyScope: Boolean,
+        companyCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<CurrencyRevaluation>
 }

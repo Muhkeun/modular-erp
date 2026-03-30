@@ -25,7 +25,15 @@ interface BomRepository : JpaRepository<BomHeader, Long> {
         SELECT b FROM BomHeader b WHERE b.tenantId = :tenantId AND b.active = true
         AND (:productCode IS NULL OR b.productCode LIKE %:productCode%)
         AND (:status IS NULL OR b.status = :status)
+        AND (:applyPlantScope = false OR b.plantCode IN :plantCodes)
         ORDER BY b.productCode, b.revision DESC
     """)
-    fun search(tenantId: String, productCode: String?, status: BomStatus?, pageable: Pageable): Page<BomHeader>
+    fun search(
+        tenantId: String,
+        productCode: String?,
+        status: BomStatus?,
+        applyPlantScope: Boolean,
+        plantCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<BomHeader>
 }

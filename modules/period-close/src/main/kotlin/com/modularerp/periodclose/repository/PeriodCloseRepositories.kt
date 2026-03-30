@@ -14,12 +14,27 @@ interface FiscalPeriodRepository : JpaRepository<FiscalPeriod, Long> {
         SELECT fp FROM FiscalPeriod fp WHERE fp.tenantId = :tenantId AND fp.active = true
         AND (:fiscalYear IS NULL OR fp.fiscalYear = :fiscalYear)
         AND (:status IS NULL OR fp.status = :status)
+        AND (:applyCompanyScope = false OR fp.companyCode IN :companyCodes)
         ORDER BY fp.fiscalYear DESC, fp.period ASC
     """)
-    fun search(tenantId: String, fiscalYear: Int?, status: FiscalPeriodStatus?, pageable: Pageable): Page<FiscalPeriod>
+    fun search(
+        tenantId: String,
+        fiscalYear: Int?,
+        status: FiscalPeriodStatus?,
+        applyCompanyScope: Boolean,
+        companyCodes: Collection<String>,
+        pageable: Pageable
+    ): Page<FiscalPeriod>
 
-    @Query("SELECT fp FROM FiscalPeriod fp WHERE fp.tenantId = :tenantId AND fp.fiscalYear = :fiscalYear AND fp.active = true ORDER BY fp.period")
-    fun findByFiscalYear(tenantId: String, fiscalYear: Int): List<FiscalPeriod>
+    @Query("""
+        SELECT fp FROM FiscalPeriod fp
+        WHERE fp.tenantId = :tenantId
+        AND fp.companyCode = :companyCode
+        AND fp.fiscalYear = :fiscalYear
+        AND fp.active = true
+        ORDER BY fp.period
+    """)
+    fun findByCompanyCodeAndFiscalYear(tenantId: String, companyCode: String, fiscalYear: Int): List<FiscalPeriod>
 }
 
 interface PeriodCloseTaskRepository : JpaRepository<PeriodCloseTask, Long> {

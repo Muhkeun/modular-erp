@@ -13,6 +13,9 @@ class CurrencyRevaluation(
     @Column(nullable = false, length = 30)
     var documentNo: String = "",
 
+    @Column(length = 20)
+    var companyCode: String? = null,
+
     @Column(nullable = false)
     var revaluationDate: LocalDate = LocalDate.now(),
 

@@ -1,5 +1,6 @@
 package com.modularerp.production.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.core.exception.EntityNotFoundException
 import com.modularerp.document.service.DocumentNumberGenerator
 import com.modularerp.masterdata.repository.BomRepository
@@ -34,10 +35,32 @@ class WorkOrderService(
 
     fun getById(id: Long): WoResponse = findWo(id).toResponse()
 
-    fun search(status: WoStatus?, plantCode: String?, productCode: String?,
-               documentNo: String?, pageable: Pageable): Page<WoResponse> =
-        woRepository.search(TenantContext.getTenantId(), status, plantCode, productCode, documentNo, pageable)
-            .map { it.toResponse() }
+    fun search(
+        status: WoStatus?,
+        plantCode: String?,
+        productCode: String?,
+        documentNo: String?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<WoResponse> {
+        if (!scopeFilter.isSupportedBy(supportsOwn = true, supportsCompany = true, supportsDepartment = false, supportsPlant = true)) {
+            return Page.empty(pageable)
+        }
+
+        return woRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            status = status,
+            plantCode = plantCode,
+            productCode = productCode,
+            documentNo = documentNo,
+            applyCompanyScope = scopeFilter.companyCodes.isNotEmpty(),
+            companyCodes = scopeFilter.scopedCompanyCodes(),
+            applyPlantScope = scopeFilter.plantCodes.isNotEmpty(),
+            plantCodes = scopeFilter.scopedPlantCodes(),
+            createdBy = scopeFilter.ownUserId,
+            pageable = pageable
+        ).map { it.toResponse() }
+    }
 
     /**
      * WO 생성 — autoPopulate=true 시 Routing에서 공정, BOM 전개로 소요자재를 자동 구성.

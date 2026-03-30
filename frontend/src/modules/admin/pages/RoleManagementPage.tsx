@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { roleApi, type Role } from '../../../shared/api/adminApi';
 import PageHeader from '../../../shared/components/PageHeader';
 import DataGrid from '../../../shared/components/DataGrid';
-import type { ColDef } from 'ag-grid-community';
+import type { ColDef, ICellRendererParams, ValueGetterParams } from 'ag-grid-community';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 
 export default function RoleManagementPage() {
@@ -36,22 +36,22 @@ export default function RoleManagementPage() {
     { field: 'description', headerName: t('common.description', '설명'), flex: 2 },
     {
       field: 'isSystem', headerName: t('admin.system', '시스템'), width: 100,
-      cellRenderer: (p: any) => p.value ? '🔒' : '',
+      cellRenderer: ({ value }: ICellRendererParams<Role, boolean>) => value ? '🔒' : '',
     },
     {
       headerName: t('admin.permissionCount', '권한 수'), width: 120,
-      valueGetter: (p: any) => p.data?.permissions?.length ?? 0,
+      valueGetter: ({ data }: ValueGetterParams<Role>) => data?.permissions?.length ?? 0,
     },
     {
       headerName: '', width: 100, sortable: false, filter: false,
-      cellRenderer: (p: any) => {
-        if (p.data?.isSystem) return null;
+      cellRenderer: ({ data }: ICellRendererParams<Role>) => {
+        if (!data || data.isSystem) return null;
         return (
           <div className="flex gap-1">
-            <button onClick={() => openEdit(p.data)} className="p-1 text-slate-400 hover:text-brand-600">
+            <button onClick={() => openEdit(data)} className="p-1 text-slate-400 hover:text-brand-600">
               <Edit2 size={14} />
             </button>
-            <button onClick={() => handleDelete(p.data.code)} className="p-1 text-slate-400 hover:text-red-500">
+            <button onClick={() => handleDelete(data.code)} className="p-1 text-slate-400 hover:text-red-500">
               <Trash2 size={14} />
             </button>
           </div>

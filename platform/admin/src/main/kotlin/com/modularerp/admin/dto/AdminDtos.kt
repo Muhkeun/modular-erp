@@ -112,6 +112,11 @@ data class MenuProfileItemResponse(
     }
 }
 
+data class ResolvedMenuProfileResponse(
+    val appliedProfiles: List<String>,
+    val menuItems: List<MenuProfileItemResponse>
+)
+
 // ── SystemCode DTOs ──
 
 data class CreateSystemCodeRequest(
@@ -212,3 +217,105 @@ data class OrganizationResponse(
         )
     }
 }
+
+data class DataScopeSearchFilter(
+    val ownUserId: String? = null,
+    val companyCodes: List<String> = emptyList(),
+    val departmentCodes: List<String> = emptyList(),
+    val plantCodes: List<String> = emptyList(),
+    val denyAll: Boolean = false
+) {
+    fun isSupportedBy(
+        supportsOwn: Boolean,
+        supportsCompany: Boolean,
+        supportsDepartment: Boolean,
+        supportsPlant: Boolean
+    ): Boolean {
+        if (denyAll) return false
+        if (!supportsOwn && ownUserId != null) return false
+        if (!supportsCompany && companyCodes.isNotEmpty()) return false
+        if (!supportsDepartment && departmentCodes.isNotEmpty()) return false
+        if (!supportsPlant && plantCodes.isNotEmpty()) return false
+        return true
+    }
+
+    fun narrowToSupported(
+        supportsOwn: Boolean,
+        supportsCompany: Boolean,
+        supportsDepartment: Boolean,
+        supportsPlant: Boolean
+    ): DataScopeSearchFilter {
+        if (denyAll) return DataScopeSearchFilter(denyAll = true)
+
+        val narrowed = DataScopeSearchFilter(
+            ownUserId = ownUserId.takeIf { supportsOwn },
+            companyCodes = companyCodes.takeIf { supportsCompany }.orEmpty(),
+            departmentCodes = departmentCodes.takeIf { supportsDepartment }.orEmpty(),
+            plantCodes = plantCodes.takeIf { supportsPlant }.orEmpty()
+        )
+
+        val hadUnsupportedScope =
+            (!supportsOwn && ownUserId != null) ||
+            (!supportsCompany && companyCodes.isNotEmpty()) ||
+            (!supportsDepartment && departmentCodes.isNotEmpty()) ||
+            (!supportsPlant && plantCodes.isNotEmpty())
+
+        val hasSupportedScope =
+            (supportsOwn && narrowed.ownUserId != null) ||
+            (supportsCompany && narrowed.companyCodes.isNotEmpty()) ||
+            (supportsDepartment && narrowed.departmentCodes.isNotEmpty()) ||
+            (supportsPlant && narrowed.plantCodes.isNotEmpty())
+
+        return if (hadUnsupportedScope && !hasSupportedScope) DataScopeSearchFilter(denyAll = true) else narrowed
+    }
+
+    fun scopedCompanyCodes(): List<String> = scopeValuesOrSentinel(companyCodes)
+    fun scopedDepartmentCodes(): List<String> = scopeValuesOrSentinel(departmentCodes)
+    fun scopedPlantCodes(): List<String> = scopeValuesOrSentinel(plantCodes)
+
+    fun matches(
+        ownerId: String? = null,
+        companyCode: String? = null,
+        departmentCode: String? = null,
+        plantCode: String? = null
+    ): Boolean {
+        if (denyAll) return false
+        if (ownUserId != null && ownerId != ownUserId) return false
+        if (companyCodes.isNotEmpty() && companyCode !in companyCodes) return false
+        if (departmentCodes.isNotEmpty() && departmentCode !in departmentCodes) return false
+        if (plantCodes.isNotEmpty() && plantCode !in plantCodes) return false
+        return true
+    }
+
+    fun matchesSupported(
+        ownerId: String? = null,
+        companyCode: String? = null,
+        departmentCode: String? = null,
+        plantCode: String? = null,
+        supportsOwn: Boolean,
+        supportsCompany: Boolean,
+        supportsDepartment: Boolean,
+        supportsPlant: Boolean
+    ): Boolean {
+        val narrowed = narrowToSupported(supportsOwn, supportsCompany, supportsDepartment, supportsPlant)
+        return narrowed.matches(
+            ownerId = ownerId.takeIf { supportsOwn },
+            companyCode = companyCode.takeIf { supportsCompany },
+            departmentCode = departmentCode.takeIf { supportsDepartment },
+            plantCode = plantCode.takeIf { supportsPlant }
+        )
+    }
+
+    private fun scopeValuesOrSentinel(values: List<String>): List<String> =
+        values.ifEmpty { listOf("__NO_MATCH__") }
+}
+
+data class ResolvedDataScopeResponse(
+    val type: DataScopeType,
+    val values: List<String>,
+    val ownUserId: String?,
+    val companyCodes: List<String>,
+    val departmentCodes: List<String>,
+    val plantCodes: List<String>,
+    val denyAll: Boolean
+)

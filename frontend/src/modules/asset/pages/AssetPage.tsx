@@ -5,7 +5,7 @@ import type { ColDef } from "ag-grid-community";
 import { Plus, ArrowLeft, Play } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
-import api from "../../../shared/api/client";
+import { assetApi } from "../../../shared/api/assetApi";
 
 interface AssetRow {
   id: number;
@@ -63,28 +63,28 @@ export default function AssetPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["assets"],
-    queryFn: async () => (await api.get("/api/v1/asset/assets?size=100")).data,
+    queryFn: async () => (await assetApi.getAll()).data,
   });
 
   const detailQuery = useQuery({
     queryKey: ["asset", selected?.id],
-    queryFn: async () => (await api.get(`/api/v1/asset/assets/${selected!.id}`)).data,
+    queryFn: async () => (await assetApi.get(selected!.id)).data,
     enabled: mode === "detail" && !!selected?.id,
   });
 
   const scheduleQuery = useQuery({
     queryKey: ["asset-schedule", selected?.id],
-    queryFn: async () => (await api.get(`/api/v1/asset/assets/${selected!.id}/depreciation-schedule`)).data,
+    queryFn: async () => (await assetApi.getSchedule(selected!.id)).data,
     enabled: mode === "detail" && !!selected?.id,
   });
 
   const createMut = useMutation({
-    mutationFn: async (body: Record<string, unknown>) => (await api.post("/api/v1/asset/assets", body)).data,
+    mutationFn: async (body: Record<string, unknown>) => (await assetApi.create(body)).data,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["assets"] }); setMode("list"); },
   });
 
   const activateMut = useMutation({
-    mutationFn: async (id: number) => (await api.post(`/api/v1/asset/assets/${id}/activate`)).data,
+    mutationFn: async (id: number) => (await assetApi.activate(id)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["assets"] });
       qc.invalidateQueries({ queryKey: ["asset", selected?.id] });
@@ -93,7 +93,7 @@ export default function AssetPage() {
 
   const disposeMut = useMutation({
     mutationFn: async ({ id, body }: { id: number; body: Record<string, unknown> }) =>
-      (await api.post(`/api/v1/asset/assets/${id}/dispose`, body)).data,
+      (await assetApi.dispose(id, body)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["assets"] });
       qc.invalidateQueries({ queryKey: ["asset", selected?.id] });
@@ -102,7 +102,7 @@ export default function AssetPage() {
   });
 
   const depRunMut = useMutation({
-    mutationFn: async (body: Record<string, unknown>) => (await api.post("/api/v1/asset/depreciation/run", body)).data,
+    mutationFn: async (body: Record<string, unknown>) => (await assetApi.runDepreciation(body)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["assets"] });
       setDepRunDialog(false);

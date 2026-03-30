@@ -1,5 +1,6 @@
 package com.modularerp.costing.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.core.exception.EntityNotFoundException
 import com.modularerp.costing.domain.*
 import com.modularerp.costing.dto.*
@@ -26,10 +27,22 @@ class CostingService(
     // ── CostCenter ──
 
     fun getCostCenterById(id: Long): CostCenterResponse = findCostCenter(id).toResponse()
+    fun getCostCenterByCode(costCenterCode: String): CostCenterResponse = findCostCenterByCode(costCenterCode).toResponse()
 
-    fun searchCostCenters(status: CostCenterStatus?, costCenterCode: String?,
-                          pageable: Pageable): Page<CostCenterResponse> =
-        costCenterRepository.search(TenantContext.getTenantId(), status, costCenterCode, pageable)
+    fun searchCostCenters(
+        status: CostCenterStatus?,
+        costCenterCode: String?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<CostCenterResponse> =
+        costCenterRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            status = status,
+            costCenterCode = costCenterCode,
+            applyDepartmentScope = scopeFilter.departmentCodes.isNotEmpty(),
+            departmentCodes = scopeFilter.scopedDepartmentCodes(),
+            pageable = pageable
+        )
             .map { it.toResponse() }
 
     @Transactional
@@ -61,16 +74,27 @@ class CostingService(
 
     fun getStandardCostById(id: Long): StandardCostResponse = findStandardCost(id).toResponse()
 
-    fun searchStandardCosts(itemCode: String?, costType: CostType?,
-                            pageable: Pageable): Page<StandardCostResponse> =
-        standardCostRepository.search(TenantContext.getTenantId(), itemCode, costType, pageable)
+    fun searchStandardCosts(
+        itemCode: String?,
+        costType: CostType?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<StandardCostResponse> =
+        standardCostRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            itemCode = itemCode,
+            costType = costType,
+            applyDepartmentScope = scopeFilter.departmentCodes.isNotEmpty(),
+            departmentCodes = scopeFilter.scopedDepartmentCodes(),
+            pageable = pageable
+        )
             .map { it.toResponse() }
 
     @Transactional
     fun createStandardCost(request: CreateStandardCostRequest): StandardCostResponse {
         val tenantId = TenantContext.getTenantId()
         val sc = StandardCost(
-            itemCode = request.itemCode, costType = request.costType,
+            itemCode = request.itemCode, costCenterCode = request.costCenterCode, costType = request.costType,
             standardRate = request.standardRate, effectiveFrom = request.effectiveFrom,
             effectiveTo = request.effectiveTo, currency = request.currency, notes = request.notes
         ).apply { assignTenant(tenantId) }
@@ -80,6 +104,7 @@ class CostingService(
     @Transactional
     fun updateStandardCost(id: Long, request: CreateStandardCostRequest): StandardCostResponse {
         val sc = findStandardCost(id)
+        sc.costCenterCode = request.costCenterCode
         sc.costType = request.costType
         sc.standardRate = request.standardRate
         sc.effectiveFrom = request.effectiveFrom
@@ -91,16 +116,32 @@ class CostingService(
 
     // ── ProductCost ──
 
-    fun searchProductCosts(itemCode: String?, fiscalYear: Int?,
-                           pageable: Pageable): Page<ProductCostResponse> =
-        productCostRepository.search(TenantContext.getTenantId(), itemCode, fiscalYear, pageable)
+    fun searchProductCosts(
+        itemCode: String?,
+        fiscalYear: Int?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<ProductCostResponse> =
+        productCostRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            itemCode = itemCode,
+            fiscalYear = fiscalYear,
+            applyDepartmentScope = scopeFilter.departmentCodes.isNotEmpty(),
+            departmentCodes = scopeFilter.scopedDepartmentCodes(),
+            pageable = pageable
+        )
             .map { it.toResponse() }
 
     @Transactional
     fun calculateProductCost(request: CalculateProductCostRequest): ProductCostResponse {
         val tenantId = TenantContext.getTenantId()
         val effectiveDate = LocalDate.now()
-        val standards = standardCostRepository.findEffective(tenantId, request.itemCode, effectiveDate)
+        val standards = standardCostRepository.findEffective(
+            tenantId = tenantId,
+            itemCode = request.itemCode,
+            date = effectiveDate,
+            costCenterCode = request.costCenterCode
+        )
 
         val materialCost = standards.filter { it.costType == CostType.MATERIAL }
             .sumOf { it.standardRate.multiply(request.quantity) }
@@ -110,7 +151,7 @@ class CostingService(
             .sumOf { it.standardRate.multiply(request.quantity) }
 
         val pc = ProductCost(
-            itemCode = request.itemCode, fiscalYear = request.fiscalYear,
+            itemCode = request.itemCode, costCenterCode = request.costCenterCode, fiscalYear = request.fiscalYear,
             period = request.period, materialCost = materialCost,
             laborCost = laborCost, overheadCost = overheadCost,
             quantity = request.quantity
@@ -125,9 +166,19 @@ class CostingService(
     // ── CostAllocation ──
 
     fun searchAllocations(status: CostAllocationStatus?, fiscalYear: Int?,
+                          scopeFilter: DataScopeSearchFilter,
                           pageable: Pageable): Page<CostAllocationResponse> =
-        costAllocationRepository.search(TenantContext.getTenantId(), status, fiscalYear, pageable)
+        costAllocationRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            status = status,
+            fiscalYear = fiscalYear,
+            applyDepartmentScope = scopeFilter.departmentCodes.isNotEmpty(),
+            departmentCodes = scopeFilter.scopedDepartmentCodes(),
+            pageable = pageable
+        )
             .map { it.toResponse() }
+
+    fun getAllocationById(id: Long): CostAllocationResponse = findAllocation(id).toResponse()
 
     @Transactional
     fun createAllocation(request: CreateCostAllocationRequest): CostAllocationResponse {
@@ -152,7 +203,7 @@ class CostingService(
 
     fun getVarianceAnalysis(itemCode: String): List<VarianceResponse> {
         val tenantId = TenantContext.getTenantId()
-        val standards = standardCostRepository.findEffective(tenantId, itemCode, LocalDate.now())
+        val standards = standardCostRepository.findEffective(tenantId, itemCode, LocalDate.now(), null)
         // Return standard rates as baseline; actual rates would come from production data
         return standards.map { sc ->
             VarianceResponse(
@@ -168,6 +219,10 @@ class CostingService(
     private fun findCostCenter(id: Long): CostCenter =
         costCenterRepository.findByTenantIdAndId(TenantContext.getTenantId(), id)
             .orElseThrow { EntityNotFoundException("CostCenter", id) }
+
+    private fun findCostCenterByCode(costCenterCode: String): CostCenter =
+        costCenterRepository.findByTenantIdAndCostCenterCodeAndActiveTrue(TenantContext.getTenantId(), costCenterCode)
+            .orElseThrow { EntityNotFoundException("CostCenter", costCenterCode) }
 
     private fun findStandardCost(id: Long): StandardCost =
         standardCostRepository.findByTenantIdAndId(TenantContext.getTenantId(), id)

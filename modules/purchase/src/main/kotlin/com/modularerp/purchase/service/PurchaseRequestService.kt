@@ -1,5 +1,6 @@
 package com.modularerp.purchase.service
 
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.core.exception.EntityNotFoundException
 import com.modularerp.core.port.ApprovalPort
 import com.modularerp.document.service.DocumentNumberGenerator
@@ -25,9 +26,32 @@ class PurchaseRequestService(
         return pr.toResponse()
     }
 
-    fun search(status: PrStatus?, companyCode: String?, documentNo: String?, pageable: Pageable): Page<PrResponse> {
+    fun search(
+        status: PrStatus?,
+        companyCode: String?,
+        documentNo: String?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<PrResponse> {
         val tenantId = TenantContext.getTenantId()
-        return prRepository.search(tenantId, status, companyCode, documentNo, pageable).map { it.toResponse() }
+        if (!scopeFilter.isSupportedBy(supportsOwn = true, supportsCompany = true, supportsDepartment = true, supportsPlant = true)) {
+            return Page.empty(pageable)
+        }
+
+        return prRepository.search(
+            tenantId = tenantId,
+            status = status,
+            companyCode = companyCode,
+            documentNo = documentNo,
+            applyCompanyScope = scopeFilter.companyCodes.isNotEmpty(),
+            companyCodes = scopeFilter.scopedCompanyCodes(),
+            applyDepartmentScope = scopeFilter.departmentCodes.isNotEmpty(),
+            departmentCodes = scopeFilter.scopedDepartmentCodes(),
+            applyPlantScope = scopeFilter.plantCodes.isNotEmpty(),
+            plantCodes = scopeFilter.scopedPlantCodes(),
+            requestedBy = scopeFilter.ownUserId,
+            pageable = pageable
+        ).map { it.toResponse() }
     }
 
     @Transactional

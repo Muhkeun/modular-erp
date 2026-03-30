@@ -3,6 +3,7 @@ package com.modularerp.account.service
 import com.modularerp.account.domain.*
 import com.modularerp.account.dto.*
 import com.modularerp.account.repository.JournalEntryRepository
+import com.modularerp.admin.dto.DataScopeSearchFilter
 import com.modularerp.core.exception.EntityNotFoundException
 import com.modularerp.document.service.DocumentNumberGenerator
 import com.modularerp.security.tenant.TenantContext
@@ -21,8 +22,32 @@ class JournalEntryService(
 
     fun getById(id: Long): JeResponse = findJe(id).toResponse()
 
-    fun search(status: JeStatus?, entryType: JournalEntryType?, documentNo: String?, pageable: Pageable): Page<JeResponse> =
-        jeRepository.search(TenantContext.getTenantId(), status, entryType, documentNo, pageable).map { it.toResponse() }
+    fun search(
+        status: JeStatus?,
+        entryType: JournalEntryType?,
+        documentNo: String?,
+        scopeFilter: DataScopeSearchFilter,
+        pageable: Pageable
+    ): Page<JeResponse> {
+        if (!scopeFilter.isSupportedBy(
+                supportsOwn = false,
+                supportsCompany = true,
+                supportsDepartment = false,
+                supportsPlant = false
+            )) {
+            return Page.empty(pageable)
+        }
+
+        return jeRepository.search(
+            tenantId = TenantContext.getTenantId(),
+            status = status,
+            entryType = entryType,
+            documentNo = documentNo,
+            applyCompanyScope = scopeFilter.companyCodes.isNotEmpty(),
+            companyCodes = scopeFilter.scopedCompanyCodes(),
+            pageable = pageable
+        ).map { it.toResponse() }
+    }
 
     @Transactional
     fun create(request: CreateJeRequest): JeResponse {

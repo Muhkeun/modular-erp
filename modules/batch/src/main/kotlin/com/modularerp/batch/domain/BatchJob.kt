@@ -18,6 +18,15 @@ class BatchJob(
     @Column(nullable = false, length = 30)
     var jobType: BatchJobType,
 
+    @Column(length = 20)
+    var companyCode: String? = null,
+
+    @Column(length = 20)
+    var departmentCode: String? = null,
+
+    @Column(length = 20)
+    var plantCode: String? = null,
+
     @Column(length = 50)
     var cronExpression: String? = null,
 

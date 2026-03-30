@@ -5,38 +5,38 @@ import type { ColDef } from "ag-grid-community";
 import { Package, AlertTriangle, TrendingUp, Search } from "lucide-react";
 import DataGrid from "../../../shared/components/DataGrid";
 import PageHeader from "../../../shared/components/PageHeader";
-import api from "../../../shared/api/client";
-
-interface StockRow {
-  id: number;
-  itemCode: string;
-  itemName: string;
-  plantCode: string;
-  storageLocation: string;
-  unitOfMeasure: string;
-  quantityOnHand: number;
-  quantityReserved: number;
-  availableQuantity: number;
-  totalValue: number;
-}
+import { logisticsApi, type StockRow } from "../../../shared/api/logisticsApi";
+import { useDataScope } from "../../../shared/hooks/useDataScope";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { filterRowsByDataScope } from "../../../shared/utils/dataScope";
 
 const LOW_STOCK_THRESHOLD = 10;
 
 export default function StockOverviewPage() {
   const { t } = useTranslation();
+  const { userId } = useAuth();
+  const dataScope = useDataScope("stock");
   const [filterPlant, setFilterPlant] = useState("");
   const [filterItem, setFilterItem] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["stock"],
-    queryFn: async () => (await api.get("/api/v1/logistics/stock?size=200")).data,
+    queryFn: () => logisticsApi.getStock({ size: 200 }),
   });
 
-  const allRows: StockRow[] = data?.data || [];
+  const allRows = useMemo<StockRow[]>(() => data?.data ?? [], [data]);
+  const scopedRows = useMemo(
+    () =>
+      filterRowsByDataScope(allRows, dataScope.scope, {
+        userId,
+        getPlantCode: (row) => row.plantCode,
+      }),
+    [allRows, dataScope.scope, userId]
+  );
 
   /* ── Filtered rows ── */
   const rows = useMemo(() => {
-    let result = allRows;
+    let result = scopedRows;
     if (filterPlant) {
       const q = filterPlant.toLowerCase();
       result = result.filter((r) => r.plantCode.toLowerCase().includes(q));
@@ -48,7 +48,7 @@ export default function StockOverviewPage() {
       );
     }
     return result;
-  }, [allRows, filterPlant, filterItem]);
+  }, [filterItem, filterPlant, scopedRows]);
 
   /* ── Summary stats ── */
   const totalItems = rows.length;
@@ -165,7 +165,13 @@ export default function StockOverviewPage() {
 
       {/* Grid */}
       <div className="card overflow-hidden">
-        <DataGrid<StockRow> rowData={rows} columnDefs={columnDefs} loading={isLoading} pageSize={50} />
+        <DataGrid<StockRow>
+          gridId="stock-overview.list"
+          rowData={rows}
+          columnDefs={columnDefs}
+          loading={isLoading || dataScope.isLoading}
+          pageSize={50}
+        />
       </div>
     </div>
   );

@@ -23,6 +23,7 @@ class CurrencyFlowTest {
 
     companion object {
         const val TENANT_ID = "CURR_TEST"
+        const val COMPANY = "C100"
         var authToken: String = ""
         var krwId: Long = 0
         var usdId: Long = 0
@@ -126,6 +127,7 @@ class CurrencyFlowTest {
     @Order(4)
     fun `create and post revaluation`() {
         val request = mapOf(
+            "companyCode" to COMPANY,
             "fiscalYear" to 2025, "period" to 3,
             "fromCurrency" to "USD", "toCurrency" to "KRW",
             "originalRate" to 1350.50, "revaluationRate" to 1370.00,
@@ -139,6 +141,7 @@ class CurrencyFlowTest {
 
         assertThat(createResp.statusCode).isEqualTo(HttpStatus.CREATED)
         val data = extractData(createResp)
+        assertThat(data["companyCode"]).isEqualTo(COMPANY)
         assertThat(data["status"]).isEqualTo("DRAFT")
         revalId = (data["id"] as Number).toLong()
 

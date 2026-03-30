@@ -11,18 +11,6 @@ test.describe("Navigation", () => {
     await expect(sidebar).toBeVisible();
 
     // Check for key nav groups (using translation keys' rendered text — checking both EN/KO)
-    const expectedMenuTexts = [
-      "Dashboard",
-      "Master Data",
-      "Procurement",
-      "Logistics",
-      "Production",
-      "Sales",
-      "Finance",
-      "CRM",
-      "HR",
-    ];
-
     // The app may be in Korean, so check that sidebar has multiple nav items
     const navItems = sidebar.locator("a, button");
     const count = await navItems.count();
